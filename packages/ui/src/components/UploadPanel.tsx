@@ -3,8 +3,6 @@ import {
   Upload,
   Mic,
   Square,
-  Play,
-  Pause,
   RotateCcw,
   CheckCircle2,
   AlertCircle,
@@ -84,7 +82,6 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
 
   // Upload & Progress state
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeLectureId, setActiveLectureId] = useState<string | null>(null);
   const [progress, setProgress] = useState<LectureProgress | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -209,7 +206,6 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
 
     try {
       const res = await api.uploadLecture(fileToUpload, lectureTitle || 'Untitled Lecture');
-      setActiveLectureId(res.id);
 
       // Poll progress endpoint
       let isDone = false;

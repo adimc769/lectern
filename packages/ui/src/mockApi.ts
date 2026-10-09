@@ -6,9 +6,6 @@ import type {
   LectureStatus,
   UploadLectureResponse,
   LecternApiClient,
-  TranscriptSegment,
-  KeyTerm,
-  Flashcard,
 } from './types';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

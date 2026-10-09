@@ -1,6 +1,6 @@
 import React from 'react';
-import { Cpu, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import type { LectureProgress, LectureStatus } from '../types';
+import { Cpu, Loader2 } from 'lucide-react';
+import type { LectureProgress } from '../types';
 import { STAGE_DESCRIPTIONS } from './UploadPanel';
 
 export interface JobProgressStateProps {

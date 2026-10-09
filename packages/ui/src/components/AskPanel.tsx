@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  MessageSquare,
   Send,
   Sparkles,
   ExternalLink,
   BookOpen,
-  HelpCircle,
   RotateCcw,
   Bot,
   User,

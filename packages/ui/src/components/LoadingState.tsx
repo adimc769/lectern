@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, Sparkles, Cpu } from 'lucide-react';
+import { Loader2, Cpu } from 'lucide-react';
 
 export interface LoadingStateProps {
   message?: string;

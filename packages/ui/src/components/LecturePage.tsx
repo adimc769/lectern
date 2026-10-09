@@ -13,10 +13,8 @@ import {
   ChevronRight,
   Sparkles,
   Clock,
-  BookOpen,
   Search,
   CheckCircle2,
-  HelpCircle,
   MessageSquare,
 } from 'lucide-react';
 import type { LectureDetail } from '../types';

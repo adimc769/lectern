@@ -4,15 +4,12 @@ import {
   Pause,
   RotateCcw,
   RotateCw,
-  Volume2,
-  VolumeX,
   Search,
   Copy,
   Check,
   Download,
   Scroll,
   Clock,
-  Sparkles,
 } from 'lucide-react';
 import type { TranscriptSegment } from '../types';
 
@@ -46,7 +43,6 @@ export const Transcript: React.FC<TranscriptProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(initialSeekTo ?? 0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
-  const [isMuted, setIsMuted] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
