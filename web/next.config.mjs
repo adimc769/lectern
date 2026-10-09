@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Disable telemetry for privacy & offline compliance
-  telemetry: false,
   async rewrites() {
     return [
       {
