@@ -1,0 +1,117 @@
+[
+  {
+    "start": 0.0,
+    "end": 24.0,
+    "text": "Hello everyone and welcome to Operating Systems 301. Today we begin our deep dive into the software layer that sits directly between hardware and user applications: the operating system kernel."
+  },
+  {
+    "start": 24.5,
+    "end": 52.0,
+    "text": "Fundamentally, an operating system fulfills two roles: it acts as a resource allocator managing CPU, memory, and I/O devices fairly and efficiently, and it acts as an extended machine providing convenient, protected abstractions to developers."
+  },
+  {
+    "start": 52.5,
+    "end": 84.0,
+    "text": "Hardware support is crucial for modern operating systems. CPUs feature dual-mode operation: User Mode and Kernel Mode. User mode restricts direct access to hardware instructions and physical memory. When a user program needs privileged hardware services, it executes a system call, triggering a software interrupt or trap that transitions the CPU safely into Kernel Mode."
+  },
+  {
+    "start": 84.5,
+    "end": 120.0,
+    "text": "Now let us define the core abstraction of execution: the process. A process is a program in execution. It encompasses the program counter, registers, text section, data section, heap for dynamic allocations, and call stack for local variables."
+  },
+  {
+    "start": 120.5,
+    "end": 155.0,
+    "text": "The kernel tracks each process using a Process Control Block, or PCB. The PCB records process state, process ID, CPU register snapshots, scheduling priority, memory management pointers, and open file descriptors."
+  },
+  {
+    "start": 155.5,
+    "end": 190.0,
+    "text": "During its life cycle, a process transitions through several states: New when created, Ready when waiting for CPU time, Running when instructions are executing on a CPU core, Waiting or Blocked when awaiting an I/O event or lock, and Terminated when finished."
+  },
+  {
+    "start": 190.5,
+    "end": 225.0,
+    "text": "When the CPU switches from running process A to process B, the kernel performs a context switch. It saves the register state of process A into its PCB, updates process state, and restores the saved registers of process B. Context switches are pure computational overhead because no useful application work occurs during the switch."
+  },
+  {
+    "start": 225.5,
+    "end": 265.0,
+    "text": "Next, let us look at CPU scheduling algorithms. The scheduler decides which ready process receives the CPU next. First-Come, First-Served, or FCFS, is simple but suffers from the convoy effect, where short CPU bursts wait behind long CPU-bound tasks."
+  },
+  {
+    "start": 265.5,
+    "end": 305.0,
+    "text": "Shortest Job First, or SJF, is provably optimal for minimizing average waiting time, but requires knowing future CPU burst lengths in advance. In time-sharing interactive systems, Round Robin scheduling is standard: each process is granted a small time quantum, typically 10 to 100 milliseconds, and preempted when the quantum expires."
+  },
+  {
+    "start": 305.5,
+    "end": 345.0,
+    "text": "Now let us examine concurrency, threads, and synchronization. A thread is a lightweight unit of CPU utilization within a process, sharing memory space, code, and data with peer threads, but retaining its own private stack and registers."
+  },
+  {
+    "start": 345.5,
+    "end": 390.0,
+    "text": "When concurrent threads read and write shared variables without synchronization, race conditions arise where output depends on non-deterministic thread interleaving. The segment of code accessing shared resources is called a critical section."
+  },
+  {
+    "start": 390.5,
+    "end": 435.0,
+    "text": "Any valid solution to the critical section problem must satisfy three criteria: mutual exclusion, progress, and bounded waiting. A mutual exclusion lock, or mutex, allows only one thread to hold the lock at any time. Semaphores generalize this with an integer counter: a counting semaphore coordinates access to a finite pool of resources using wait and signal operations."
+  },
+  {
+    "start": 435.5,
+    "end": 485.0,
+    "text": "When multiple processes compete for resources and locks, they can enter a deadlock. A deadlock is a state where every process in a set is waiting for an event that only another process in the set can cause. Coffman proved that four necessary conditions must hold simultaneously for a deadlock to occur: Mutual Exclusion, Hold and Wait, No Preemption, and Circular Wait."
+  },
+  {
+    "start": 485.5,
+    "end": 530.0,
+    "text": "Let us detail the four deadlock conditions. Mutual exclusion means at least one resource is held in a non-shareable mode. Hold and wait means a process is currently holding at least one resource and requesting additional resources held by others. No preemption dictates resources cannot be forcibly confiscated from a process; they must be released voluntarily. Circular wait means a closed cycle of processes exists, where each process waits for a resource held by the next process in the cycle."
+  },
+  {
+    "start": 530.5,
+    "end": 575.0,
+    "text": "If you break any one of these four conditions, deadlock is impossible. For instance, enforcing a strict global resource ordering breaks circular wait, while allowing preemption prevents unresolvable waits."
+  },
+  {
+    "start": 575.5,
+    "end": 625.0,
+    "text": "Next, let us move to memory management and virtual memory. Virtual memory decouples the process logical address space from physical RAM addresses. It allows processes to execute even when their entire memory footprint does not fit in physical memory, and provides strict isolation between processes."
+  },
+  {
+    "start": 625.5,
+    "end": 675.0,
+    "text": "The dominant memory management architecture is paging. Virtual memory is partitioned into fixed-size chunks called pages, typically 4 kilobytes, and physical RAM is partitioned into matching fixed-size blocks called frames. The Memory Management Unit, or MMU, uses a page table to translate virtual page numbers into physical frame numbers."
+  },
+  {
+    "start": 675.5,
+    "end": 725.0,
+    "text": "Because page table lookups add memory access overhead, hardware incorporates a fast, fully associative hardware cache called the Translation Lookaside Buffer, or TLB. When a virtual address is accessed, the MMU checks the TLB first. On a TLB hit, translation finishes in fractions of a nanosecond without visiting memory."
+  },
+  {
+    "start": 725.5,
+    "end": 775.0,
+    "text": "When a process references a virtual page marked invalid in the page table because it is not currently resident in physical RAM, the MMU raises a page fault interrupt. The kernel intercepts the trap, locates the required page on backing swap storage, allocates a physical frame, reads the page from disk into RAM, updates the page table, and restarts the faulted instruction."
+  },
+  {
+    "start": 775.5,
+    "end": 830.0,
+    "text": "If no physical frame is free during a page fault, the kernel invokes a page replacement algorithm. Least Recently Used, or LRU, replaces the frame that has remained unreferenced for the longest time, which approximates the theoretically optimal algorithm Belady's MIN. Other algorithms include FIFO, which can suffer from Belady's anomaly, and the Second Chance clock algorithm."
+  },
+  {
+    "start": 830.5,
+    "end": 880.0,
+    "text": "If a system spends more time servicing page faults and swapping pages in and out of disk than executing useful user code, the system enters thrashing. Thrashing can be mitigated using the Working Set model, ensuring that only processes whose active working set of pages fits in RAM are permitted to run."
+  },
+  {
+    "start": 880.5,
+    "end": 935.0,
+    "text": "Finally, let us briefly mention file systems. The operating system provides a persistent hierarchical namespace over block storage devices. In Unix-like systems, files are represented by inodes, which contain file metadata, ownership permissions, and pointers to data blocks on storage."
+  },
+  {
+    "start": 935.5,
+    "end": 990.0,
+    "text": "In conclusion, today we reviewed kernel privilege levels, process lifecycles and context switching, CPU scheduling, concurrency synchronization, the four Coffman deadlock conditions, virtual memory paging, and page fault replacement algorithms. Next week we will explore network sockets and distributed file systems. Thank you everyone!"
+  }
+]

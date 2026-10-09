@@ -1,0 +1,127 @@
+[
+  {
+    "start": 0.0,
+    "end": 22.0,
+    "text": "Good morning everyone. Welcome to Computer Science 201: Introduction to Data Structures and Algorithms. Today we begin our semester-long exploration of how we organize, store, and manipulate data efficiently in memory."
+  },
+  {
+    "start": 22.5,
+    "end": 48.0,
+    "text": "Before we look at specific data structures, we need to distinguish between an Abstract Data Type, or ADT, and a data structure. An ADT is a mathematical model or specification that defines what operations can be performed, while a data structure is the concrete physical implementation of that model in code."
+  },
+  {
+    "start": 48.5,
+    "end": 75.0,
+    "text": "Our first concrete data structure is the humble array. An array is a collection of elements of the same type placed in contiguous memory locations. Because memory addresses are contiguous, we can compute the exact physical address of any element in O(1) constant time using base address plus index times element size."
+  },
+  {
+    "start": 75.5,
+    "end": 105.0,
+    "text": "However, arrays come with trade-offs. Static arrays have fixed sizes determined at allocation time. Dynamic arrays, such as Python lists or C++ vectors, solve this by automatically resizing: when capacity is exceeded, the array allocates a new chunk usually double the size, copies all elements over, and frees the old block. This resizing takes O(N) time in the worst case, but amortized over N insertions, append remains O(1)."
+  },
+  {
+    "start": 105.5,
+    "end": 135.0,
+    "text": "Now let us contrast arrays with linked lists. Unlike arrays, a linked list does not require contiguous memory. Instead, elements are stored in discrete nodes scattered across the heap, where each node contains data and a pointer or reference to the next node in sequence."
+  },
+  {
+    "start": 135.5,
+    "end": 165.0,
+    "text": "In a singly linked list, traversal is strictly forward. Finding the k-th element requires starting at the head pointer and traversing k nodes, which is an O(N) linear time operation. Random access is impossible. However, inserting or deleting a node at the head is a clean O(1) operation because no other elements need to shift."
+  },
+  {
+    "start": 165.5,
+    "end": 195.0,
+    "text": "A doubly linked list adds a second pointer to every node pointing to the previous node. This allows bidirectional traversal and enables O(1) deletions given a direct pointer to the node, at the cost of extra memory overhead for the second pointer."
+  },
+  {
+    "start": 195.5,
+    "end": 225.0,
+    "text": "Moving forward to restricted linear ADTs, let us talk about stacks. A stack enforces a Last-In, First-Out, or LIFO, access policy. The two fundamental operations are push, which adds an element to the top, and pop, which removes the most recently added element from the top. Both push and pop operate in O(1) time."
+  },
+  {
+    "start": 225.5,
+    "end": 255.0,
+    "text": "Stacks are ubiquitous in computing: function call management in operating systems, expression evaluation and syntax parsing in compilers, and backtracking algorithms like depth-first search all rely heavily on stacks."
+  },
+  {
+    "start": 255.5,
+    "end": 285.0,
+    "text": "Next is the queue ADT. In contrast to a stack, a queue adheres to First-In, First-Out, or FIFO, ordering. Elements are enqueued at the rear and dequeued from the front. Both operations are O(1) when implemented with a doubly linked list or a circular array buffer."
+  },
+  {
+    "start": 285.5,
+    "end": 315.0,
+    "text": "Queues model asynchronous waiting lines: CPU task scheduling queues, printer spoolers, and breadth-first search graph traversals all depend on FIFO queue semantics."
+  },
+  {
+    "start": 315.5,
+    "end": 350.0,
+    "text": "Now let us shift our attention to non-linear hierarchical structures: trees. A tree consists of nodes connected by directed edges, with no cycles, rooted at a single top node called the root. A node with no children is termed a leaf node. The height of a tree is the length of the longest path from the root to any leaf."
+  },
+  {
+    "start": 350.5,
+    "end": 385.0,
+    "text": "A binary tree is a tree where each node has at most two children, conventionally called the left child and the right child. A particularly vital variant is the Binary Search Tree, or BST. In a BST, for every node with key k, all keys in the left subtree are strictly less than k, and all keys in the right subtree are strictly greater than k."
+  },
+  {
+    "start": 385.5,
+    "end": 420.0,
+    "text": "This ordering property enables binary search during lookups. When a BST is well-balanced, search, insertion, and deletion take O(log N) time because each comparison halves the remaining search space. But beware: if keys are inserted in sorted order into an unbalanced BST, the tree degenerates into a linear chain with height N, degrading lookup to O(N)."
+  },
+  {
+    "start": 420.5,
+    "end": 455.0,
+    "text": "To prevent this degradation, self-balancing binary search trees such as AVL trees and Red-Black trees automatically perform tree rotations upon insertions and deletions to guarantee logarithmic height O(log N) in the worst case."
+  },
+  {
+    "start": 455.5,
+    "end": 490.0,
+    "text": "Let us also touch upon tree traversals. In-order traversal visits the left subtree, then the node itself, then the right subtree. Notice that performing an in-order traversal on a BST yields keys in strictly ascending sorted order. Pre-order visits node, left, right, often used for serialization, while post-order visits left, right, node, useful for deleting tree nodes bottom-up."
+  },
+  {
+    "start": 490.5,
+    "end": 530.0,
+    "text": "Next, let us explore one of the most powerful structures in all of software engineering: the hash table. A hash table implements an associative array mapping unique keys to values. It accomplishes near-instantaneous average lookup, insertion, and deletion in O(1) time by passing the key through a hash function."
+  },
+  {
+    "start": 530.5,
+    "end": 570.0,
+    "text": "A good hash function must be deterministic, computationally fast, and uniformly distribute hash values across the table buckets to minimize collisions. A collision occurs when two distinct keys produce the exact same bucket index."
+  },
+  {
+    "start": 570.5,
+    "end": 610.0,
+    "text": "There are two classical strategies to resolve hash collisions. The first is separate chaining, where each table bucket stores the head of a linked list or small binary tree of entries that collided at that bucket index."
+  },
+  {
+    "start": 610.5,
+    "end": 650.0,
+    "text": "The second collision resolution strategy is open addressing. Under open addressing, all elements reside directly inside the table array. When a collision occurs, we probe alternative buckets according to a systematic probing sequence: linear probing checks index plus one, quadratic probing squares the step size, and double hashing computes a secondary hash function."
+  },
+  {
+    "start": 650.5,
+    "end": 690.0,
+    "text": "The efficiency of a hash table is governed by its load factor, defined as alpha equals N divided by M, where N is the number of stored keys and M is the total number of buckets. When the load factor exceeds a threshold, typically 0.75, the table must be dynamically resized and rehashed to prevent degradation to O(N)."
+  },
+  {
+    "start": 690.5,
+    "end": 735.0,
+    "text": "Let us summarize how to choose between arrays, linked lists, binary search trees, and hash tables. If you need lightning-fast random index access and know your data size in advance, arrays are optimal due to contiguous memory and CPU cache locality."
+  },
+  {
+    "start": 735.5,
+    "end": 780.0,
+    "text": "If you need frequent insertions and deletions at the extremities without memory reallocation or capacity limits, linked lists excel. If you need to maintain data in sorted order while allowing dynamic insertions and range queries, balanced binary search trees like AVL or Red-Black trees are the right choice."
+  },
+  {
+    "start": 780.5,
+    "end": 830.0,
+    "text": "And if your primary workload consists of point lookups by arbitrary keys without ordering requirements, hash tables provide unbeatable O(1) average case performance, provided your hash function minimizes clustering."
+  },
+  {
+    "start": 830.5,
+    "end": 880.0,
+    "text": "In our next lecture, we will study graph representations, including adjacency matrices and adjacency lists, followed by Dijkstra's shortest path algorithm. Please review chapter 3 of the textbook on asymptotic complexity and complete problem set 1 by Friday. Thank you everyone, see you next Wednesday!"
+  }
+]
