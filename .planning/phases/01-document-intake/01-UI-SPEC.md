@@ -91,7 +91,7 @@ Inherited success token (not re-specified, source `globals.css` `--accent-teal`)
 | Element | Copy |
 |---------|------|
 | Primary CTA | Process Document |
-| Secondary CTA | Browse files (dropzone link text); Cancel (modal footer, dismisses without storing anything) |
+| Secondary CTA | Browse files (dropzone link text); Discard Document (modal footer, dismisses without storing anything) |
 | Empty state heading | No documents yet |
 | Empty state body | Upload a PDF, DOCX, or TXT file — or paste your notes — to create your first study source. Accepts PDF, DOCX, TXT up to 25 MB. |
 | Paste-box placeholder | Paste your notes here… (TXT-equivalent plain text, stored as a TXT source) |
@@ -123,7 +123,8 @@ Prescriptive layout for the four Phase 1 surfaces. Placement of the upload surfa
 - Tab body mirrors the audio upload form: optional `Document Title` input, then a dashed dropzone (`border-2 border-dashed rounded-xl p-6`) with `accept=".pdf,.docx,.txt"`. Dropzone hint: `Drop a document here, or browse files`; sub-hint is the formats reminder verbatim.
 - Below the dropzone, a paste-text box labeled `Or paste notes`: `textarea` with `min-h-32`, same input styling as title fields, paste-box placeholder verbatim. File selection and paste box are mutually exclusive — selecting a file disables the paste box and vice versa, with Label-style helper text stating which input is active.
 - Client-side validation runs synchronously on select/drop/paste-submit, in this order: (1) extension allowlist PDF/DOCX/TXT → wrong-type copy; (2) size > 25 MB → over-limit copy; (3) empty file (0 bytes) or whitespace-only paste → empty copy. Encrypted/scanned detection that requires parsing happens server-side at intake and returns the encrypted/scanned copy before persistence — still no library trace on rejection (source: D-04, D-06).
-- Selected-file chip mirrors the audio pattern: `w-8 h-8` teal icon chip + filename + size in MB + `X` remove button (44px hit area). Footer: `Cancel` + `Process Document` (navy bg, `disabled:opacity-40` until exactly one valid input). Submit navigates to the source view (S3) on success (source: D-03).
+- Selected-file chip mirrors the audio pattern: `w-8 h-8` teal icon chip + filename + size in MB + `X` remove button (44px hit area) with `aria-label="Remove selected document"` and `title="Remove selected document"` tooltip; activating it clears the selection with no library trace. Footer: `Discard Document` + `Process Document` (navy bg, `disabled:opacity-40` until exactly one valid input). Submit navigates to the source view (S3) on success (source: D-03).
+- S1 visual focal point: the dashed dropzone and the `Process Document` primary CTA form a single centered focal group — the dropzone is the dominant mass, the navy CTA is the sole high-contrast accent in the tab body, and title input / paste box / footer render visually subordinate. Modal close `X` (top-right, 44px hit area) carries `aria-label="Close document upload"` and `title="Close document upload"` tooltip; `Escape` triggers the same `Discard Document` behavior (dismisses without storing anything).
 
 ### S2 — Mixed library rows
 
@@ -151,21 +152,26 @@ Prescriptive layout for the four Phase 1 surfaces. Placement of the upload surfa
 
 ## UI Considerations
 
-Applicable state considerations resolved: 9 covered, 2 backstop, 0 unresolved.
+Applicable state considerations resolved: 11 explicit, 10 backstop, 0 unresolved.
 
-| Category | Element(s) | Status | Resolution / Reason |
-|----------|------------|--------|---------------------|
-| empty | document library list | ✅ covered | Zero documents render the documented No documents yet empty state with the formats reminder and an Upload CTA opening the document tab. |
-| empty | paste-text box | ✅ covered | Empty paste box shows the placeholder and keeps Process Document disabled until non-whitespace text is present. |
-| loading | extraction progress (S3) | ✅ covered | Live region with linear progressbar and stage steps at 800ms poll, mirroring PipelineProgress; swaps to reader on COMPLETED. |
-| loading | mixed library rows | ✅ covered | PROCESSING rows show animated badge plus progressPercent via existing polling; layout identical to READY rows. |
-| error | file select validation | ✅ covered | Wrong-type, over-limit, and empty inputs are blocked at select time with the documented cause-plus-action copy; no upload fires. |
-| error | extraction failure (S3) | ✅ covered | FAILED badge plus the processing-failed copy with Try again returning to the picker; rejected files leave no library trace. |
-| populated | mixed library rows | ✅ covered | Typical volume renders title plus type chip plus badge plus page count in one mixed list with documents and lectures interleaved. |
-| zero-one-many | mixed library rows | ✅ covered | One row reads singular page copy (1 page); many rows keep identical row rhythm with no section split between lectures and documents. |
-| long-text | reader headings | ✅ covered | Headings over 120 chars wrap to two lines then ellipsis with title tooltip; reader prose always wraps at 1.7 line-height. |
-| partial | DOCX without Heading styles | 🧪 backstop | Held-out visual UI-state test: DOCX with custom styles falls back to positional section labels with no fabricated headings. |
-| overflow | extracted-text reader pane | 🧪 backstop | Held-out visual UI-state test: page and section dividers stay sticky and prose scrolls inside the reader pane with no page-level overflow. |
+- Zero documents render the documented No documents yet empty state with the formats reminder and an Upload CTA opening the document tab.
+- Empty paste box shows the placeholder and keeps Process Document disabled until non-whitespace text is present.
+- Submit navigates to the source view immediately; the upload tab carries no async loading state of its own.
+- Wrong-type, over-limit, and empty inputs are blocked at select time with the documented cause-plus-action copy; no upload fires.
+- Zero-document library, PROCESSING rows with animated badge plus progressPercent, populated rows, and singular 1 page copy all render per the S2 row contract.
+- Extraction progress renders the live region with linear progressbar and stage steps at 800ms poll, swapping to the reader on COMPLETED.
+- Extraction failure renders the FAILED badge plus the processing-failed copy with Try again returning to the picker; rejected files leave no library trace.
+- Reader headings over 120 chars wrap to two lines then ellipsis with title tooltip; reader prose always wraps at 1.7 line-height; page and section dividers stay sticky with pane-level scroll.
+- { statement: Selected-file chip truncates long filenames with a title tooltip carrying the full name, verification: backstop }
+- { statement: Dropzone and paste box scroll internally with no page-level overflow, verification: backstop }
+- { statement: Long text in the upload tab wraps or truncates with tooltips and never breaks tab layout, verification: backstop }
+- { statement: Library fetch failure renders an inline error with a retry action instead of an empty list, verification: backstop }
+- { statement: Documents missing page metadata render title plus badge with the page count omitted, verification: backstop }
+- { statement: Long library lists scroll at page level with identical row rhythm and no inner scroll container, verification: backstop }
+- { statement: Long titles in mixed rows truncate with title tooltips, verification: backstop }
+- { statement: Source-view progress region stays bounded and long titles wrap without breaking the badge layout, verification: backstop }
+- { statement: Long document titles in the source view wrap to two lines maximum with ellipsis and a title tooltip, verification: backstop }
+- { statement: DOCX without Heading styles falls back to positional section labels with no fabricated headings, verification: backstop }
 
 Empty-state and error-state copy live in `## Copywriting Contract` above; this section covers state coverage and references those rows.
 
