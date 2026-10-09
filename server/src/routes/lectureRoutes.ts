@@ -25,17 +25,17 @@ const DEMO_SUMMARY =
 const DEMO_SEGMENTS = [
   {
     startTime: 0,
-    endTime: 20,
+    endTime: 17.03,
     text: 'Raft is a consensus algorithm for managing a replicated log across a cluster of servers. In sixty seconds: the cluster elects a leader, the leader accepts client commands, and every server applies the same commands in the same order.',
   },
   {
-    startTime: 20,
-    endTime: 40,
+    startTime: 17.03,
+    endTime: 36.38,
     text: 'Leader election uses randomized timeouts. When followers stop hearing heartbeats, they become candidates, vote for themselves, and request votes. The candidate with a majority becomes leader for the new term, which keeps split votes from stalling the cluster.',
   },
   {
-    startTime: 40,
-    endTime: 60,
+    startTime: 36.38,
+    endTime: 51.96,
     text: 'The leader replicates log entries with remote procedure calls and commits an entry once a majority stores it. If a leader fails, a new election starts, and the election safety guarantee ensures at most one leader per term.',
   },
 ];
