@@ -10,6 +10,8 @@ import {
   Download,
   Scroll,
   Clock,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import type { TranscriptSegment } from '../types';
 
@@ -43,6 +45,9 @@ export const Transcript: React.FC<TranscriptProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(initialSeekTo ?? 0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [volume, setVolume] = useState<number>(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [voiceNarration, setVoiceNarration] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
@@ -52,12 +57,14 @@ export const Transcript: React.FC<TranscriptProps> = ({
   const syntheticTimerRef = useRef<number | null>(null);
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const lastSpokenIndexRef = useRef<number | null>(null);
 
   // Calculate total duration from segments if audio not loaded
   const maxSegmentEnd = segments.length > 0 ? Math.max(...segments.map((s) => s.end)) : 60;
-  const duration = audioRef.current?.duration && !isNaN(audioRef.current.duration)
-    ? audioRef.current.duration
-    : maxSegmentEnd;
+  const duration =
+    audioRef.current?.duration && !isNaN(audioRef.current.duration)
+      ? audioRef.current.duration
+      : maxSegmentEnd;
 
   // Sync external current time if controlled from parent
   const activeTime = externalCurrentTime !== undefined ? externalCurrentTime : playbackTime;
@@ -67,10 +74,76 @@ export const Transcript: React.FC<TranscriptProps> = ({
     (seg) => activeTime >= seg.start && activeTime <= seg.end
   );
 
+  // Pre-load available local voices on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      const handleVoices = () => {
+        window.speechSynthesis.getVoices();
+      };
+      window.speechSynthesis.onvoiceschanged = handleVoices;
+      return () => {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    }
+  }, []);
+
+  // Web Speech API: narrate current line aloud in real time
+  useEffect(() => {
+    if (!isPlaying || !voiceNarration || isMuted || volume <= 0) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        lastSpokenIndexRef.current = null;
+      }
+      return;
+    }
+
+    // If activeSegmentIndex changed, speak new segment
+    if (
+      activeSegmentIndex >= 0 &&
+      activeSegmentIndex < segments.length &&
+      activeSegmentIndex !== lastSpokenIndexRef.current
+    ) {
+      lastSpokenIndexRef.current = activeSegmentIndex;
+      const textToSpeak = segments[activeSegmentIndex].text;
+
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.rate = playbackSpeed;
+        utterance.volume = isMuted ? 0 : volume;
+
+        const voices = window.speechSynthesis.getVoices();
+        const enVoice =
+          voices.find((v) => v.lang.startsWith('en-US')) ||
+          voices.find((v) => v.lang.startsWith('en')) ||
+          voices[0];
+
+        if (enVoice) {
+          utterance.voice = enVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+  }, [isPlaying, activeSegmentIndex, voiceNarration, isMuted, volume, playbackSpeed, segments]);
+
+  // Clean up speech synthesis on component unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   // Seek handler
   const handleSeek = (seconds: number) => {
     const clampedTime = Math.max(0, Math.min(seconds, duration));
     setPlaybackTime(clampedTime);
+    lastSpokenIndexRef.current = null; // force re-speech on seek
+
     if (audioRef.current) {
       audioRef.current.currentTime = clampedTime;
     }
@@ -90,20 +163,24 @@ export const Transcript: React.FC<TranscriptProps> = ({
   const togglePlay = () => {
     if (isPlaying) {
       setIsPlaying(false);
+      lastSpokenIndexRef.current = null;
       if (audioRef.current) {
         audioRef.current.pause();
+      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
       }
     } else {
       setIsPlaying(true);
       if (audioRef.current && audioUrl) {
         audioRef.current.play().catch(() => {
-          // If browser audio playback fails or url is invalid, fallback to timer
+          // If browser audio playback fails, fallback to timer + speech synthesis
         });
       }
     }
   };
 
-  // Synthetic playback loop (ensures playback scrubbing & line highlighting works even without external audio files)
+  // Synthetic playback loop (ensures playback scrubbing & line highlighting works smoothly)
   useEffect(() => {
     if (isPlaying) {
       const intervalMs = 250;
@@ -111,6 +188,9 @@ export const Transcript: React.FC<TranscriptProps> = ({
         setPlaybackTime((prev) => {
           if (prev >= duration) {
             setIsPlaying(false);
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+              window.speechSynthesis.cancel();
+            }
             return 0;
           }
           const next = prev + (intervalMs / 1000) * playbackSpeed;
@@ -164,7 +244,9 @@ export const Transcript: React.FC<TranscriptProps> = ({
 
   // Download transcript
   const handleDownloadTranscript = () => {
-    const fullText = segments.map((s) => `[${formatTime(s.start)} - ${formatTime(s.end)}]\n${s.text}\n`).join('\n');
+    const fullText = segments
+      .map((s) => `[${formatTime(s.start)} - ${formatTime(s.end)}]\n${s.text}\n`)
+      .join('\n');
     const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -183,7 +265,7 @@ export const Transcript: React.FC<TranscriptProps> = ({
     <div
       className={`bg-slate-900 border border-slate-800 rounded-2xl flex flex-col shadow-xl overflow-hidden ${className}`}
     >
-      {/* Hidden audio element for real audio sources */}
+      {/* Real audio element if audioUrl exists */}
       {audioUrl && (
         <audio
           ref={audioRef}
@@ -193,7 +275,12 @@ export const Transcript: React.FC<TranscriptProps> = ({
               setPlaybackTime(audioRef.current.currentTime);
             }
           }}
-          onEnded={() => setIsPlaying(false)}
+          onEnded={() => {
+            setIsPlaying(false);
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+              window.speechSynthesis.cancel();
+            }
+          }}
         />
       )}
 
@@ -221,7 +308,8 @@ export const Transcript: React.FC<TranscriptProps> = ({
         </div>
 
         {/* Player controls */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Playback Controls */}
           <div className="flex items-center gap-2">
             {/* Skip back 5s */}
             <button
@@ -238,10 +326,14 @@ export const Transcript: React.FC<TranscriptProps> = ({
               type="button"
               onClick={togglePlay}
               className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-950/60 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              title={isPlaying ? 'Pause' : 'Play'}
-              aria-label={isPlaying ? 'Pause' : 'Play'}
+              title={isPlaying ? 'Pause' : 'Play audio narration'}
+              aria-label={isPlaying ? 'Pause' : 'Play audio narration'}
             >
-              {isPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white ml-0.5" />}
+              {isPlaying ? (
+                <Pause className="w-4 h-4 fill-white" />
+              ) : (
+                <Play className="w-4 h-4 fill-white ml-0.5" />
+              )}
             </button>
 
             {/* Skip forward 5s */}
@@ -263,10 +355,64 @@ export const Transcript: React.FC<TranscriptProps> = ({
             >
               {playbackSpeed}x
             </button>
+
+            {/* Volume / Mute Controls */}
+            <div className="flex items-center gap-1.5 ml-1 pl-2 border-l border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsMuted((prev) => !prev)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title={isMuted ? 'Unmute' : 'Mute'}
+              >
+                {isMuted || volume === 0 ? (
+                  <VolumeX className="w-4 h-4 text-rose-400" />
+                ) : (
+                  <Volume2 className="w-4 h-4 text-slate-300" />
+                )}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={isMuted ? 0 : volume}
+                onChange={(e) => {
+                  setVolume(parseFloat(e.target.value));
+                  if (isMuted) setIsMuted(false);
+                }}
+                className="w-16 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hidden sm:inline-block"
+                title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
+              />
+            </div>
           </div>
 
-          {/* Right Toolbar */}
+          {/* Right Toolbar & Status Indicators */}
           <div className="flex items-center gap-2">
+            {/* Audio Voice Narration Toggle */}
+            <button
+              type="button"
+              onClick={() => setVoiceNarration((prev) => !prev)}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                voiceNarration
+                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600/70'
+                  : 'bg-slate-800 text-slate-400 border-slate-700'
+              }`}
+              title="Toggle offline spoken narration of transcript lines"
+            >
+              {isPlaying && voiceNarration && !isMuted ? (
+                <span className="flex items-end gap-0.5 h-3">
+                  <span className="w-0.5 bg-emerald-400 h-2 animate-pulse" />
+                  <span className="w-0.5 bg-emerald-400 h-3 animate-pulse delay-75" />
+                  <span className="w-0.5 bg-emerald-400 h-1.5 animate-pulse delay-150" />
+                </span>
+              ) : (
+                <Volume2 className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">
+                {voiceNarration ? 'Voice Audio: ON' : 'Voice Audio: OFF'}
+              </span>
+            </button>
+
             {/* Auto scroll toggle */}
             <button
               type="button"
@@ -279,7 +425,7 @@ export const Transcript: React.FC<TranscriptProps> = ({
               title="Toggle auto-scroll to current speaking line"
             >
               <Scroll className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Auto-scroll</span>
+              <span className="hidden md:inline">Auto-scroll</span>
             </button>
 
             {/* Copy transcript */}
@@ -303,6 +449,23 @@ export const Transcript: React.FC<TranscriptProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Live Audio Narration Status Bar */}
+        {isPlaying && (
+          <div className="flex items-center justify-between text-[11px] text-slate-300 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-indigo-900/50">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span className="text-emerald-300 font-medium">
+                {audioUrl
+                  ? 'Playing recorded lecture audio file'
+                  : 'Narrating lecture aloud using on-device voice synthesis'}
+              </span>
+            </div>
+            <span className="text-slate-400 font-mono text-[10px]">
+              {activeSegmentIndex >= 0 ? `Segment #${activeSegmentIndex + 1}` : 'Seeking'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Transcript Search Bar */}
@@ -384,9 +547,9 @@ export const Transcript: React.FC<TranscriptProps> = ({
 
                 {/* Active Indicator Chip */}
                 {isCurrentActive && (
-                  <span className="shrink-0 flex items-center gap-1 text-[10px] font-mono font-bold text-indigo-300 uppercase px-2 py-0.5 rounded bg-indigo-900/60 border border-indigo-700/60">
+                  <span className="shrink-0 flex items-center gap-1.5 text-[10px] font-mono font-bold text-indigo-300 uppercase px-2 py-0.5 rounded bg-indigo-900/60 border border-indigo-700/60">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-                    <span>Now</span>
+                    <span>Speaking</span>
                   </span>
                 )}
               </div>

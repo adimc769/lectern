@@ -358,6 +358,15 @@ export class MockLecternApi implements LecternApiClient {
     const lectureTitle = title || fallbackTitle;
     const shouldFail = this.options.simulateFailureForTitles?.includes(lectureTitle);
 
+    let audioUrl: string | undefined;
+    if (typeof URL !== 'undefined' && URL.createObjectURL && file) {
+      try {
+        audioUrl = URL.createObjectURL(file);
+      } catch {
+        // ignore
+      }
+    }
+
     // Initial item in 'converting' state
     const newLecture: LectureDetail = {
       id,
@@ -369,6 +378,7 @@ export class MockLecternApi implements LecternApiClient {
       keyTerms: [],
       flashcards: [],
       transcript: [],
+      audioUrl,
     };
 
     this.lectures.set(id, newLecture);
