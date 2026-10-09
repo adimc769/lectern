@@ -32,6 +32,15 @@
 - [ ] **LIB-02**: Student can see honest per-service readiness (generation gated with reasons when a service is down)
 - [ ] **LIB-03**: Student can keyword-search and semantically retrieve across transcripts and document text
 
+### Visual Study Decks
+- [ ] **DECK-01**: Student can generate a grounded slide deck (title → objectives → concepts → recap → knowledge check) from a lecture, document, or selected sources
+- [ ] **DECK-02**: Student can navigate a deck locally (keyboard, slide progress, per-slide source refs) with loading/empty/error states
+- [ ] **DECK-03**: Deck content stays within slide budgets (no overflow/unreadable slides) across text, definitions, processes, and examples
+- [ ] **DECK-04**: Student can export or open the deck as Slidev-compatible Markdown for use in real Slidev
+
+### Editorial UI System
+- [ ] **UI-01**: All eight screens (Home, Import, Source workspace, Ask, Flashcards, Exams, Decks, Settings) follow one editorial design system (type scale, spacing, components, states) with WCAG AA contrast and reduced-motion support
+
 ## v2 Requirements (deferred)
 - [ ] Difficulty + topic controls on generation (trigger: "harder questions" requests)
 - [ ] Timed exam mode with per-topic breakdown (trigger: untimed player validated)
@@ -45,6 +54,8 @@
 - Cloud sync / accounts / sharing — violates local-first core value
 - LLM-judge auto-grading — small-model grading untrustworthy without eval harness
 - SM-2 calendars, mastery dashboards, TTS podcasts, binary exporters — second-product scope
+- Spaced-repetition extensions beyond existing Leitner boxes + streaks — frozen per scope refinement
+- Full Slidev runtime embed — rejected in favor of deck-contract approach
 
 ## Traceability
 
@@ -67,6 +78,11 @@
 | LIB-01 | Phase 4 | Pending |
 | LIB-02 | Phase 4 | Pending |
 | LIB-03 | Phase 3 | Pending |
+| DECK-01 | Phase 5 | Pending |
+| DECK-02 | Phase 5 | Pending |
+| DECK-03 | Phase 5 | Pending |
+| DECK-04 | Phase 5 | Pending |
+| UI-01 | Phase 6 | Pending |
 
 ---
 

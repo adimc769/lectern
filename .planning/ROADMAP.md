@@ -2,7 +2,7 @@
 
 ## Overview
 
-Lectern already turns lecture audio into cited study material; this milestone adds the document half of the core value — a student imports real lecture materials (audio they have, documents they will) and studies from them with grounded, cited AI help, fully offline. Four MVP vertical slices deliver end-to-end user capabilities in dependency order: import documents as retrieval-ready sources, generate and take grounded practice exams, ask cited questions across all materials while reinforcing with guides and mistake review, then land the credibility gate — one unified library that never lies about readiness, proven by an airplane-mode run.
+Lectern already turns lecture audio into cited study material; this milestone adds the document half of the core value — a student imports real lecture materials (audio they have, documents they will) and studies from them with grounded, cited AI help, fully offline. Four MVP vertical slices deliver end-to-end user capabilities in dependency order: import documents as retrieval-ready sources, generate and take grounded practice exams, ask cited questions across all materials while reinforcing with guides and mistake review, then land the credibility gate — one unified library that never lies about readiness, proven by an airplane-mode run. Two follow-on phases add presentation-style Visual Study Decks (deck-contract, no Slidev runtime embed) and roll out the editorial UI system screen by screen.
 
 ## Phases
 
@@ -16,6 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Grounded Exams** - Generate and take cited practice exams from documents
 - [ ] **Phase 3: Cited Q&A and Reinforcement** - Ask across all materials, study guides, mistake review
 - [ ] **Phase 4: Honest Library** - One unified library with truthful readiness plus offline proof
+- [ ] **Phase 5: Visual Study Decks** - Grounded slide decks via deck-contract, rendered locally
+- [ ] **Phase 6: Editorial Redesign** - One coherent UI system across all eight screens
 
 ## Phase Details
 
@@ -74,10 +76,34 @@ Note: criteria 3–4 are milestone acceptance gates from PROJECT.md Active scope
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 5: Visual Study Decks
+**Goal**: Students turn a lecture, document, or selected sources into a grounded slide deck they can navigate locally
+**Mode:** mvp
+**Depends on**: Phase 2
+**Requirements**: DECK-01, DECK-02, DECK-03, DECK-04
+**Success Criteria** (what must be TRUE):
+  1. Student generates a deck (title → objectives → concepts → recap → knowledge check) grounded in selected sources, each slide carrying source refs
+  2. Student navigates the deck locally with keyboard, progress, and loading/empty/error states — no overflow or unreadable slides
+  3. Deck Markdown opens in real Slidev without modification (deck-contract compatibility)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 6: Editorial Redesign
+**Goal**: Every screen follows one editorial design system — no screen left on the old look
+**Mode:** mvp
+**Depends on**: Phase 4
+**Requirements**: UI-01
+**Success Criteria** (what must be TRUE):
+  1. Home, Import, Source workspace, Ask, Flashcards, Exams, Decks, and Settings share one type scale, spacing system, and component states (existing Study Circuit restyled in, playful theme retired)
+  2. Text meets WCAG AA contrast, focus indicators visible throughout, reduced-motion honored
+  3. No fake buttons, placeholder functionality, hardcoded AI responses, or decorative purposeless components
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 (Phase 5 needs Phase 2 chunks; Phase 6 restyles everything last)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -85,3 +111,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 2. Grounded Exams | TBD | Not started | - |
 | 3. Cited Q&A and Reinforcement | TBD | Not started | - |
 | 4. Honest Library | TBD | Not started | - |
+| 5. Visual Study Decks | TBD | Not started | - |
+| 6. Editorial Redesign | TBD | Not started | - |

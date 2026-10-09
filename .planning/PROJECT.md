@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Lectern is a local-first, offline-capable AI study assistant for students. Students import audio lectures (uploaded or browser-recorded) and documents (PDF, DOCX, TXT, notes) and turn them into summaries, key terms, flashcards, practice exams, study guides, and cited Q&A — with 100% of AI inference running on-device and zero cloud dependencies.
+Lectern is a local-first, offline-capable AI study assistant for students. Students import audio lectures (uploaded or browser-recorded) and documents (PDF, DOCX, TXT, notes) and turn them into summaries, key terms, flashcards, practice exams, study guides, presentation-style Visual Study Decks, and cited Q&A — with 100% of AI inference running on-device and zero cloud dependencies.
 
 ## Core Value
 
@@ -25,6 +25,10 @@ A student can import real lecture materials and study from them with grounded, c
 - [ ] "Not covered in your materials." fallback for unsupported questions (never fabricated citations)
 - [ ] Honest per-service readiness indicators (no offline claims when a service is down)
 - [ ] Offline verification run (airplane-mode core workflow) + repo hygiene (no weights/uploads/DB in git)
+- [ ] Visual Study Decks: grounded slide decks (title → objectives → concepts → recap → knowledge check) with per-slide source refs, rendered and navigated locally
+- [ ] Editorial UI system applied product-wide (Home, Import, Source workspace, Ask, Flashcards, Exams, Decks, Settings) — no screen left on the old look
+- [ ] Unified import flow across audio/record/PDF/DOCX/TXT with honest format support claims
+- [ ] Settings distinguishes internet-disconnected vs local-services-ready vs offline-workflow-verified
 
 ### Out of Scope
 
@@ -33,6 +37,8 @@ A student can import real lecture materials and study from them with grounded, c
 - Advanced PDF layout/table reconstruction — deferred, low value per effort
 - Formats beyond PDF/DOCX/TXT — deferred until the reliable core ships
 - Export, analytics, elaborate library filters — P2, cut for MVP focus
+- Full Slidev runtime embed (Vue+Vite inside Next.js) — rejected: second framework runtime for marginal gain; deck-contract approach instead
+- Spaced-repetition extensions — existing Leitner boxes + streaks grandfathered and frozen, no new SRS features
 
 ## Context
 
@@ -59,6 +65,9 @@ A student can import real lecture materials and study from them with grounded, c
 | Exam generation JSON-schema validated, grounded-only, deduplicated | Unreliable free-text parsing + hallucinations kill trust | — Pending |
 | Perf targets set only after benchmarks | No real-time promises for 30–90 min lectures without measuring | — Pending |
 | GSD onboarding (PROJECT → config → requirements → roadmap) | User-approved planning discipline before implementation | — Pending |
+| Visual Study Decks via deck-contract (Slidev-compatible Markdown, native Next.js renderer) | Full Slidev embed = second framework runtime; contract keeps one stack, offline, overflow-safe | — Pending |
+| Editorial "Reading Room" UI system product-wide; Study Circuit restyled into it | One coherent language beats two competing aesthetics; playful mode not kept as separate theme | — Pending |
+| Existing SRS boxes + streaks grandfathered, extensions cut (P2) | Already shipped and sufficient; per-question SM-2/calendars are a second product | — Pending |
 
 ## Evolution
 
@@ -78,4 +87,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-09 after initialization*
+*Last updated: 2026-10-09 after scope refinement (Visual Study Decks + editorial redesign)*

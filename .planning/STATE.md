@@ -2,7 +2,7 @@
 gsd_state_version: '1.0'
 status: planning
 progress:
-  total_phases: 4
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,10 +20,10 @@ See: .planning/PROJECT.md (updated 2026-10-09)
 
 ## Current Position
 
-Phase: 1 of 4 (Document Intake)
+Phase: 1 of 6 (Document Intake)
 Plan: 0 of TBD in current phase
 Status: Ready to plan
-Last activity: 2026-10-09 — Roadmap created (4 MVP vertical-slice phases, 17/17 requirements mapped)
+Last activity: 2026-10-09 — Scope refined (Visual Study Decks + editorial redesign added as Phases 5–6, 22/22 requirements mapped)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -55,6 +55,7 @@ Recent decisions affecting current work:
 
 - [Roadmap]: 4 MVP vertical-slice phases (intake → exams → Q&A/reinforcement → honest library); PLAY-03/LIB-03 ride with Phase 3, LIB-01/LIB-02 gate Phase 4
 - [Roadmap]: Research flags carried forward — Phase 2 needs Ollama schema-adherence probe, Phase 3 needs refusal-envelope research during planning
+- [Scope refinement]: Visual Study Decks via deck-contract (no Slidev runtime embed) added as Phase 5 (DECK-01..04, depends on Phase 2); editorial redesign added as Phase 6 (UI-01, restyle incl. Study Circuit, SRS frozen)
 
 ### Pending Todos
 
@@ -77,5 +78,5 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-09
-Stopped at: Roadmap created, awaiting approval to plan Phase 1
+Stopped at: Scope refined and approved, awaiting plan for Phase 1
 Resume file: None
