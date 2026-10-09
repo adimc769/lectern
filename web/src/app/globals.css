@@ -3,37 +3,63 @@
 @tailwind utilities;
 
 :root {
-  --background: #09090b;
-  --foreground: #f4f4f5;
-  --border: #27272a;
+  --bg-page: #FBFBF9;
+  --bg-surface: #FFFFFF;
+  --bg-surface-subtle: #F4F4F0;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  --text-subtle: #94A3B8;
+  --border-color: #E5E5DF;
+  --border-subtle: #ECECE8;
+  --accent-teal: #0D9488;
+  --accent-navy: #1E293B;
+  --accent-blue: #2563EB;
+}
+
+.dark {
+  --bg-page: #0B0F19;
+  --bg-surface: #131B2E;
+  --bg-surface-subtle: #19233C;
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --text-subtle: #64748B;
+  --border-color: #1E293B;
+  --border-subtle: #182238;
+  --accent-teal: #14B8A6;
+  --accent-navy: #38BDF8;
+  --accent-blue: #60A5FA;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
+  color: var(--text-main);
+  background: var(--bg-page);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* Precise subtle scrollbars */
+/* Subtle, distraction-free scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #CBD5E1;
   border-radius: 3px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #94A3B8;
 }
 
 /* 3D Flip Card utility classes */
@@ -54,8 +80,12 @@ body {
   transform: rotateY(180deg);
 }
 
-/* Focus visibility */
+/* High-contrast accessible focus visible */
 :focus-visible {
-  outline: 2px solid #6366f1;
-  outline-offset: 1px;
+  outline: 2px solid #0F172A;
+  outline-offset: 2px;
+}
+
+.dark :focus-visible {
+  outline: 2px solid #38BDF8;
 }
