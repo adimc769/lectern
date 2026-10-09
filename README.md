@@ -1,8 +1,5 @@
 # Lectern — Offline Lecture Assistant
 
-> **Local AI Hackathon Project**  
-> A private, offline web app where students record or upload lectures to automatically generate timestamped transcripts, hierarchical summaries, key terms, flashcards, and cross-lecture cited Q&A. **100% of AI inference executes locally on the user's GPU with zero cloud API dependencies.**
-
 ---
 
 ## Why Local AI?
