@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { WifiOff, Cpu, ShieldCheck } from 'lucide-react';
+import { OfflineBadge } from '../components/OfflineBadge';
 
 export const metadata: Metadata = {
   title: 'Lectern — Offline Lecture Assistant',
@@ -29,26 +29,7 @@ export default function RootLayout({
             </div>
 
             {/* Prominent Offline & Local GPU Badges */}
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              {/* Hardware GPU Badge */}
-              <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
-                <Cpu className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                <span className="hidden sm:inline">RTX 5060 Ti</span>
-                <span className="text-cyan-400 font-mono">16GB</span>
-              </div>
-
-              {/* Strict Offline Status Badge */}
-              <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-950/70 border border-emerald-500/30 text-xs font-semibold text-emerald-300 shadow-sm shadow-emerald-900/20">
-                <WifiOff className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Offline Mode</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              </div>
-
-              <div className="hidden md:flex items-center space-x-1 text-xs text-slate-400 pl-2 border-l border-slate-800">
-                <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
-                <span>Zero Cloud APIs</span>
-              </div>
-            </div>
+            <OfflineBadge />
           </div>
         </header>
 
