@@ -16,12 +16,14 @@ interface Finding {
 const IGNORED_DIRS = new Set([
   'node_modules',
   '.git',
+  '.opencode',
   'dist',
   'build',
   'coverage',
   '.turbo',
   '.cache',
 ]);
+
 
 const IGNORED_FILES = new Set([
   'package-lock.json',
@@ -144,8 +146,7 @@ export function auditFile(filePath: string): Finding[] {
     }
 
     // Check general non-localhost URLs
-    if (NON_LOCAL_URL_PATTERN.test(line) && !isAuditScript) {
-      // Ignore schema.org or json-schema specification links if in comments/schema
+    if (NON_LOCAL_URL_PATTERN.test(line) && !isAuditScript && !line.includes('"$schema"')) {
       findings.push({
         filePath,
         lineNumber,
@@ -153,6 +154,7 @@ export function auditFile(filePath: string): Finding[] {
         lineContent: line.trim(),
       });
     }
+
   }
 
   return findings;
