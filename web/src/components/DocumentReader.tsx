@@ -51,7 +51,7 @@ function coercePages(raw: unknown): DocumentPageDTO[] {
 
 /**
  * Extracted-text reader for a READY document source.
- * PDF renders Page N dividers, DOCX renders section headings with anchors,
+ * PDF renders Page N dividers, DOCX renders styled headings and paragraphs in-place,
  * TXT renders paragraph breaks with positional labels.
  */
 export function DocumentReader({ document, className = '' }: Props) {
@@ -70,70 +70,70 @@ export function DocumentReader({ document, className = '' }: Props) {
       ? `${docType} · ${pageCount} ${pageCount === 1 ? 'page' : 'pages'} · READY`
       : `${docType} · READY`;
 
-  const renderParagraphs = (text: string, keyPrefix: string) =>
-    splitParagraphs(text).map((para, idx) => (
-      <p
-        key={`${keyPrefix}-p-${idx}`}
-        className="text-sm font-normal text-[#0F172A] dark:text-slate-200 break-words"
-        style={{ lineHeight: 1.7 }}
-      >
-        {para}
-      </p>
-    ));
-
   return (
-    <article className={`space-y-6 ${className}`} aria-label={`Extracted text of ${document.title}`}>
-      <header className="space-y-1">
-        <h1
-          title={document.title}
-          className="text-xl font-semibold text-[#0F172A] dark:text-white break-words"
-          style={{ lineHeight: 1.2 }}
-        >
-          {document.title}
-        </h1>
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B] dark:text-[#94A3B8]">
-          {meta}
-        </p>
-      </header>
+    <article className={`space-y-4 ${className}`} aria-label={`Extracted text of ${document.title}`}>
+      <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+        <span>Extracted Document Content</span>
+        <span className="font-mono text-[11px]">{meta}</span>
+      </div>
 
       {pages.length === 0 ? (
-        <p className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+        <div className="rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-white dark:bg-[#131B2E] p-8 text-center text-sm text-[#64748B] dark:text-[#94A3B8]">
           This document has no readable pages yet.
-        </p>
+        </div>
       ) : (
-        <div className="max-h-[70vh] overflow-y-auto rounded-xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] p-6 space-y-8">
+        <div className="max-h-[70vh] overflow-y-auto rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] p-6 sm:p-8 space-y-6 shadow-xs">
           {pages.map((page) => {
             const sections = page.sections;
             const paragraphs = splitParagraphs(page.text);
 
-            if (docType === 'DOCX' && sections.length > 0) {
+            if (docType === 'DOCX') {
+              // Normalize sections set for fast in-place heading matching
+              const normalizedSections = new Set(sections.map((s) => s.toLowerCase().trim()));
+
               return (
-                <section key={`page-${page.pageNo}`} aria-label={`Page ${page.pageNo}`}>
-                  {sections.map((heading, sIdx) => (
-                    <div
-                      key={`page-${page.pageNo}-section-${sIdx}`}
-                      className="sticky top-0 z-10 bg-[#FFFFFF] dark:bg-[#131B2E] py-2 -my-2"
-                    >
-                      <h2
-                        id={`page-${page.pageNo}-section-${sIdx}`}
-                        title={heading}
-                        className="text-base font-semibold text-[#1E293B] dark:text-white line-clamp-2 break-words"
-                        style={{ lineHeight: 1.2 }}
-                      >
-                        {heading}
-                      </h2>
+                <section key={`page-${page.pageNo}`} aria-label={`Page ${page.pageNo}`} className="space-y-4">
+                  {pages.length > 1 && (
+                    <div className="flex items-center gap-3 py-1 text-xs font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                      <div className="h-px flex-1 bg-[#E5E5DF] dark:bg-[#1E293B]" />
+                      <span>Page {page.pageNo}</span>
+                      <div className="h-px flex-1 bg-[#E5E5DF] dark:bg-[#1E293B]" />
                     </div>
-                  ))}
-                  <div className="mt-4 space-y-4">
-                    {paragraphs.map((para, pIdx) => (
-                      <p
-                        key={`page-${page.pageNo}-p-${pIdx}`}
-                        className="text-sm font-normal text-[#0F172A] dark:text-slate-200 break-words"
-                        style={{ lineHeight: 1.7 }}
-                      >
-                        {para}
-                      </p>
-                    ))}
+                  )}
+
+                  <div className="space-y-3.5">
+                    {paragraphs.map((para, pIdx) => {
+                      const isHeading =
+                        normalizedSections.has(para.toLowerCase()) ||
+                        sections.some(
+                          (s) =>
+                            s.length > 3 &&
+                            (para.toLowerCase().startsWith(s.toLowerCase()) ||
+                              s.toLowerCase().startsWith(para.toLowerCase()))
+                        );
+
+                      if (isHeading) {
+                        return (
+                          <h2
+                            key={`page-${page.pageNo}-h-${pIdx}`}
+                            className={`text-base sm:text-lg font-bold text-[#0F172A] dark:text-white leading-snug pb-1 border-b border-[#E5E5DF]/60 dark:border-[#1E293B] ${
+                              pIdx > 0 ? 'pt-4' : 'pt-0'
+                            }`}
+                          >
+                            {para}
+                          </h2>
+                        );
+                      }
+
+                      return (
+                        <p
+                          key={`page-${page.pageNo}-p-${pIdx}`}
+                          className="text-sm font-normal text-[#0F172A] dark:text-slate-200 leading-relaxed break-words"
+                        >
+                          {para}
+                        </p>
+                      );
+                    })}
                   </div>
                 </section>
               );
@@ -141,17 +141,14 @@ export function DocumentReader({ document, className = '' }: Props) {
 
             if (docType === 'TXT') {
               return (
-                <section key={`page-${page.pageNo}`} aria-label={`Section ${page.pageNo}`}>
-                  <div className="space-y-4">
+                <section key={`page-${page.pageNo}`} aria-label={`Section ${page.pageNo}`} className="space-y-4">
+                  <div className="space-y-3.5">
                     {paragraphs.map((para, pIdx) => (
                       <div key={`page-${page.pageNo}-p-${pIdx}`} className="space-y-1">
-                        <p className="text-xs font-semibold text-[#94A3B8] dark:text-[#64748B]">
+                        <p className="text-[11px] font-semibold text-[#94A3B8] dark:text-[#64748B] font-mono">
                           ¶ {pIdx + 1}
                         </p>
-                        <p
-                          className="text-sm font-normal text-[#0F172A] dark:text-slate-200 break-words"
-                          style={{ lineHeight: 1.7 }}
-                        >
+                        <p className="text-sm font-normal text-[#0F172A] dark:text-slate-200 leading-relaxed break-words">
                           {para}
                         </p>
                       </div>
@@ -161,14 +158,24 @@ export function DocumentReader({ document, className = '' }: Props) {
               );
             }
 
+            // PDF
             return (
-              <section key={`page-${page.pageNo}`} aria-label={`Page ${page.pageNo}`}>
-                <div className="sticky top-0 z-10 bg-[#FFFFFF] dark:bg-[#131B2E] py-2 -my-2 border-b border-[#ECECE8] dark:border-[#1E293B]">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B] dark:text-[#94A3B8]">
-                    Page {page.pageNo}
-                  </p>
+              <section key={`page-${page.pageNo}`} aria-label={`Page ${page.pageNo}`} className="space-y-4">
+                <div className="flex items-center gap-3 py-1 text-xs font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                  <div className="h-px flex-1 bg-[#E5E5DF] dark:bg-[#1E293B]" />
+                  <span>Page {page.pageNo}</span>
+                  <div className="h-px flex-1 bg-[#E5E5DF] dark:bg-[#1E293B]" />
                 </div>
-                <div className="mt-4 space-y-4">{renderParagraphs(page.text, `page-${page.pageNo}`)}</div>
+                <div className="space-y-3.5">
+                  {paragraphs.map((para, idx) => (
+                    <p
+                      key={`page-${page.pageNo}-p-${idx}`}
+                      className="text-sm font-normal text-[#0F172A] dark:text-slate-200 leading-relaxed break-words"
+                    >
+                      {para}
+                    </p>
+                  ))}
+                </div>
               </section>
             );
           })}
@@ -177,3 +184,5 @@ export function DocumentReader({ document, className = '' }: Props) {
     </article>
   );
 }
+
+export default DocumentReader;
