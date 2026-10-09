@@ -1,0 +1,26 @@
+{
+  "name": "lectern-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev:server": "npm --workspace=server run dev",
+    "dev:web": "npm --workspace=web run dev",
+    "dev": "npm run dev:server",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "db:generate": "npm --workspace=server run db:generate",
+    "db:push": "npm --workspace=server run db:push"
+  },
+  "dependencies": {
+    "ecc-universal": "2.2.3"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  }
+}

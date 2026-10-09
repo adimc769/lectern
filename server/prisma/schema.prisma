@@ -1,0 +1,71 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Lecture {
+  id          String              @id @default(uuid())
+  title       String
+  audioPath   String
+  duration    Float               @default(0)
+  status      String              @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  summary     String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  segments    TranscriptSegment[]
+  chunks      Chunk[]
+  flashcards  Flashcard[]
+  keyTerms    KeyTerm[]
+}
+
+model TranscriptSegment {
+  id        String   @id @default(uuid())
+  lectureId String
+  startTime Float
+  endTime   Float
+  text      String
+
+  lecture   Lecture  @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@index([lectureId])
+}
+
+model Chunk {
+  id            String   @id @default(uuid())
+  lectureId     String
+  startTime     Float
+  endTime       Float
+  text          String
+  embeddingJson String   // Serialized JSON array of float numbers (768-dim from nomic-embed-text)
+
+  lecture       Lecture  @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@index([lectureId])
+}
+
+model Flashcard {
+  id        String   @id @default(uuid())
+  lectureId String
+  front     String
+  back      String
+
+  lecture   Lecture  @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@index([lectureId])
+}
+
+model KeyTerm {
+  id         String   @id @default(uuid())
+  lectureId  String
+  term       String
+  definition String
+
+  lecture    Lecture  @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@index([lectureId])
+}
