@@ -24,7 +24,7 @@ import type { LectureDTO } from '@lectern/shared';
 import { fetchLectures } from '../lib/api';
 import { LectureViewer } from '../components/LectureViewer';
 import { UploadPanel } from '../components/UploadPanel';
-import { AskPanel } from '../components/AskPanel';
+import { QnAChat } from '../components/QnAChat';
 
 export default function Home() {
   const [lectures, setLectures] = useState<LectureDTO[]>([]);
@@ -327,7 +327,7 @@ export default function Home() {
         {/* Right Column: Cross-Lecture Q&A Assistant (5 cols) */}
         <div className="lg:col-span-5 sticky top-24">
           <div className="space-y-4">
-            <AskPanel onCitationClick={handleCitationClick} />
+            <QnAChat onCitationClick={handleCitationClick} />
           </div>
         </div>
       </div>
