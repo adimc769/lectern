@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build Outputs
+.next/
+out/
+dist/
+build/
+
+# Local Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+prisma/*.db
+
+# Uploads & Temporary Media
+uploads/
+temp/
+*.wav
+*.mp3
+*.m4a
+*.webm
+
+# Heavy Local AI Models & Binaries
+models/
+tools/whisper/Release/
+tools/whisper/*.zip
+
+# Environment & Logs
+.env
+.env*.local
+*.log
+npm-debug.log*
+
+# OS / Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
