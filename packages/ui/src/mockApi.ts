@@ -4,6 +4,7 @@ import type {
   LectureListItem,
   LectureProgress,
   LectureStatus,
+  QuizQuestion,
   UploadLectureResponse,
   LecternApiClient,
 } from './types';
@@ -51,21 +52,25 @@ const INITIAL_LECTURES: LectureDetail[] = [
         question: 'Why does Raft use randomized election timers?',
         answer:
           'Randomized election timers prevent split votes by ensuring that one candidate will almost always time out and request votes before others, securing a majority quickly.',
+        sourceStart: 511,
       },
       {
         question: 'What is the quorum requirement for a cluster of 5 nodes?',
         answer:
           '3 nodes (floor(5/2) + 1). Any two majorities of 3 will intersect at at least one node, preventing conflicting decisions.',
+        sourceStart: 631,
       },
       {
         question: 'Can committed log entries ever be overwritten in Raft?',
         answer:
           'No. Once an entry is committed by a leader and replicated to a majority, Raft safety guarantees it will be present in future leaders’ logs forever.',
+        sourceStart: 751,
       },
       {
         question: 'What happens to uncommitted entries from an old partitioned leader?',
         answer:
           'When the partitioned leader reconnects, the new leader forces it to overwrite conflicting uncommitted entries with the authoritative log sequence.',
+        sourceStart: 873,
       },
     ],
     transcript: [
@@ -176,16 +181,19 @@ const INITIAL_LECTURES: LectureDetail[] = [
         question: 'Why do we scale dot products by 1 / sqrt(d_k) in self-attention?',
         answer:
           'For large vector dimensions d_k, dot products grow large in magnitude, pushing softmax into regions with vanishing gradients. Scaling stabilizes gradients.',
+        sourceStart: 396,
       },
       {
         question: 'Why do Transformers require positional encodings whereas RNNs do not?',
         answer:
           'Attention operations are order-agnostic (permutation-invariant); without positional information, token order would have no influence on attention weights.',
+        sourceStart: 541,
       },
       {
         question: 'What is the computational complexity of standard self-attention with sequence length N?',
         answer:
           'O(N^2) quadratic time and memory complexity with respect to the sequence length due to the N x N attention weight matrix.',
+        sourceStart: 711,
       },
     ],
     transcript: [
@@ -261,11 +269,13 @@ const INITIAL_LECTURES: LectureDetail[] = [
         question: 'What is the primary benefit of SSA form in compiler optimization?',
         answer:
           'SSA creates an explicit, direct 1:1 mapping between variable definitions and their uses (def-use chains), eliminating complex reaching definitions analyses.',
+        sourceStart: 111,
       },
       {
         question: 'What is the role of a phi-node at a control flow merge point?',
         answer:
           'A phi-node resolves multiple reaching definitions from branching paths (e.g. if/else branches) by selecting the appropriate version based on runtime path execution.',
+        sourceStart: 221,
       },
     ],
     transcript: [
@@ -307,6 +317,100 @@ export interface MockApiOptions {
   simulatedProgressSpeedMs?: number; // how quickly stages advance
   simulateFailureForTitles?: string[]; // trigger failed state for testing
 }
+
+/**
+ * Demo-mode quiz fixtures: two preloaded lectures ship with flashcards AND
+ * quizzes. Every question is answerable from the transcript only, carries 4
+ * distinct choices with exactly one correct answer, a one-line explanation,
+ * and the sourceStart of the chunk it came from.
+ */
+const QUIZZES: Record<string, QuizQuestion[]> = {
+  'lec-1': [
+    {
+      id: 'lec-1-q1',
+      question: 'Which three states can a Raft node be in?',
+      choices: [
+        'Follower, Candidate, Leader',
+        'Primary, Replica, Witness',
+        'Proposer, Acceptor, Learner',
+        'Coordinator, Cohort, Observer',
+      ],
+      answerIndex: 0,
+      explanation: 'Raft nodes start as Followers and move to Candidate or Leader during elections.',
+      sourceStart: 321,
+    },
+    {
+      id: 'lec-1-q2',
+      question: 'What range does Raft use for randomized election timeouts?',
+      choices: ['150–300 milliseconds', '50–100 milliseconds', '1–2 seconds', '5–10 seconds'],
+      answerIndex: 0,
+      explanation: 'Randomized 150–300ms timeouts let one node win first and avoid split votes.',
+      sourceStart: 511,
+    },
+    {
+      id: 'lec-1-q3',
+      question: 'What is the quorum size for a 5-node Raft cluster?',
+      choices: ['3 nodes', '2 nodes', '4 nodes', 'All 5 nodes'],
+      answerIndex: 0,
+      explanation: 'A quorum is floor(5/2) + 1 = 3, so any two quorums overlap.',
+      sourceStart: 631,
+    },
+    {
+      id: 'lec-1-q4',
+      question: 'Can a committed Raft log entry ever be overwritten?',
+      choices: [
+        'No — committed entries persist in all future leaders’ logs',
+        'Yes — the next leader rewrites them',
+        'Yes — when a partition heals',
+        'Only if the term changes twice',
+      ],
+      answerIndex: 0,
+      explanation: 'Raft safety guarantees committed entries survive every future election.',
+      sourceStart: 751,
+    },
+  ],
+  'lec-2': [
+    {
+      id: 'lec-2-q1',
+      question: 'What is the scaled dot-product attention formula?',
+      choices: [
+        'softmax(Q·Kᵀ / √d_k)·V',
+        'softmax(Q+V / d_k)·K',
+        'sigmoid(Q·K)·V / d_k',
+        'max(Q−K, 0)·V',
+      ],
+      answerIndex: 0,
+      explanation: 'Query-key dot products are scaled, soft-maxed, then weight the values.',
+      sourceStart: 271,
+    },
+    {
+      id: 'lec-2-q2',
+      question: 'Why divide attention scores by √d_k?',
+      choices: [
+        'To keep softmax out of vanishing-gradient regions',
+        'To make attention matrices sparse',
+        'To add positional information',
+        'To reduce the parameter count',
+      ],
+      answerIndex: 0,
+      explanation: 'Large dot products saturate softmax, so scaling keeps gradients healthy.',
+      sourceStart: 396,
+    },
+    {
+      id: 'lec-2-q3',
+      question: 'Why do Transformers need positional encodings?',
+      choices: [
+        'Self-attention is permutation-invariant without them',
+        'Softmax requires ordered inputs to converge',
+        'They replace the feed-forward layers',
+        'They compress the key matrix',
+      ],
+      answerIndex: 0,
+      explanation: 'Attention ignores token order, so position vectors restore sequence order.',
+      sourceStart: 541,
+    },
+  ],
+};
 
 export class MockLecternApi implements LecternApiClient {
   private lectures: Map<string, LectureDetail> = new Map();
@@ -448,11 +552,13 @@ export class MockLecternApi implements LecternApiClient {
           question: `What was the primary focus of "${title}"?`,
           answer:
             'Exploring the local lecture recording, automatic audio transcription, and offline knowledge extraction.',
+          sourceStart: 0,
         },
         {
           question: 'Are audio files or transcripts ever sent to the cloud?',
           answer:
             'No. Lectern operates 100% offline; audio transcription, embeddings, and Q&A stay entirely on the local device.',
+          sourceStart: 13,
         },
       ];
       lec.transcript = [
@@ -521,6 +627,30 @@ export class MockLecternApi implements LecternApiClient {
       throw new Error(`Progress for lecture "${id}" not found.`);
     }
     return { ...progress };
+  }
+
+  /**
+   * GET /lectures/:id/quiz -> [{id,question,choices,answerIndex,explanation,sourceStart}]
+   * Validates shape (4 distinct choices, valid answerIndex) before returning.
+   */
+  async getQuiz(id: string): Promise<QuizQuestion[]> {
+    await delay(200);
+    const quiz = QUIZZES[id];
+    if (!quiz) {
+      return [];
+    }
+    for (const q of quiz) {
+      if (
+        !Array.isArray(q.choices) ||
+        q.choices.length !== 4 ||
+        new Set(q.choices).size !== 4 ||
+        q.answerIndex < 0 ||
+        q.answerIndex > 3
+      ) {
+        throw new Error(`Invalid quiz fixture for lecture "${id}" (question "${q.id}").`);
+      }
+    }
+    return quiz.map((q) => ({ ...q, choices: [...q.choices] as QuizQuestion['choices'] }));
   }
 
   /**

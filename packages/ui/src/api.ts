@@ -3,6 +3,7 @@ import type {
   LectureDetail,
   LectureListItem,
   LectureProgress,
+  QuizQuestion,
   UploadLectureResponse,
   LecternApiClient,
 } from './types';
@@ -96,6 +97,13 @@ export class LecternApi implements LecternApiClient {
    */
   async getLectureProgress(id: string): Promise<LectureProgress> {
     return this.request<LectureProgress>(`/lectures/${encodeURIComponent(id)}/progress`);
+  }
+
+  /**
+   * GET /lectures/:id/quiz -> [{id,question,choices,answerIndex,explanation,sourceStart}]
+   */
+  async getQuiz(id: string): Promise<QuizQuestion[]> {
+    return this.request<QuizQuestion[]>(`/lectures/${encodeURIComponent(id)}/quiz`);
   }
 
   /**

@@ -29,6 +29,18 @@ export interface KeyTerm {
 export interface Flashcard {
   question: string;
   answer: string;
+  /** Seconds into the lecture audio this card came from. Opens transcript at timestamp. */
+  sourceStart?: number;
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  choices: [string, string, string, string];
+  answerIndex: number;
+  explanation: string;
+  /** Seconds into the lecture audio this question came from. */
+  sourceStart: number;
 }
 
 export interface LectureDetail {
@@ -74,4 +86,6 @@ export interface LecternApiClient {
   getLecture: (id: string) => Promise<LectureDetail>;
   getLectureProgress: (id: string) => Promise<LectureProgress>;
   ask: (question: string) => Promise<AskResponse>;
+  /** GET /lectures/:id/quiz — 8-10 multiple-choice questions per lecture (mocked in fixtures). */
+  getQuiz: (id: string) => Promise<QuizQuestion[]>;
 }
