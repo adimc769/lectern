@@ -7,7 +7,63 @@ import type {
   PipelineStage,
 } from '@lectern/shared';
 
-const FALLBACK_LECTURES: LectureDTO[] = [
+export type DataSource = 'live' | 'fallback';
+
+export interface SourcedResult<T> {
+  data: T;
+  source: DataSource;
+}
+
+/**
+ * Thrown whenever the backend cannot serve live data and the caller must
+ * fall back to explicit seeded demo content. The fallback payload is never
+ * returned silently — callers catch this error (or use the *WithSource
+ * variants) and opt into demo data via getFallbackLectures() /
+ * getFallbackLecture(), plus a user-visible toast.
+ */
+export class BackendUnreachableError extends Error {
+  source: 'fallback' = 'fallback';
+  endpoint: string;
+  status?: number;
+
+  constructor(endpoint: string, message?: string, status?: number) {
+    super(message || `Backend unreachable at ${endpoint} — showing seeded demo data`);
+    this.name = 'BackendUnreachableError';
+    this.endpoint = endpoint;
+    this.status = status;
+  }
+}
+
+export function isBackendUnreachableError(err: unknown): err is BackendUnreachableError {
+  return (
+    err instanceof BackendUnreachableError ||
+    (typeof err === 'object' &&
+      err !== null &&
+      (err as { name?: string }).name === 'BackendUnreachableError')
+  );
+}
+
+export function getFallbackLectures(): LectureDTO[] {
+  return FALLBACK_LECTURES.map((l) => ({ ...l }));
+}
+
+export function getFallbackLecture(id: string): LectureDTO | undefined {
+  const found = FALLBACK_LECTURES.find((l) => l.id === id);
+  return found ? { ...found } : undefined;
+}
+
+/** Dispatches the global AppShell toast event (5s auto-dismiss, no deps). */
+export function notifyBackendFallback(
+  message = 'Backend unreachable — showing seeded demo data'
+): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('lectern:backend-fallback', { detail: { message } })
+    );
+  }
+}
+
+export const FALLBACK_LECTURES: LectureDTO[] = [
   {
     id: 'lec-1',
     title: 'Distributed Systems: Raft Consensus & State Machine Replication',
@@ -306,37 +362,57 @@ const FALLBACK_LECTURES: LectureDTO[] = [
   },
 ];
 
-export async function fetchLectures(): Promise<LectureDTO[]> {
+export async function fetchLecturesWithSource(): Promise<SourcedResult<LectureDTO[]>> {
   try {
     const res = await fetch('/api/lectures', { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        return data;
+      if (Array.isArray(data)) {
+        return { data, source: 'live' };
       }
     }
-  } catch (err) {
-    console.warn('[Lectern API] Fetch /api/lectures fell back to local offline dataset:', err);
+  } catch {
+    // Network failure — explicit seeded fallback below, never silent.
   }
-  return FALLBACK_LECTURES;
+  return { data: getFallbackLectures(), source: 'fallback' };
 }
 
-export async function fetchLecture(id: string): Promise<LectureDTO> {
+export async function fetchLectures(): Promise<LectureDTO[]> {
+  const result = await fetchLecturesWithSource();
+  if (result.source === 'live') {
+    return result.data;
+  }
+  throw new BackendUnreachableError('/api/lectures');
+}
+
+export async function fetchLectureWithSource(id: string): Promise<SourcedResult<LectureDTO>> {
   try {
     const res = await fetch(`/api/lectures/${encodeURIComponent(id)}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       if (data && data.id) {
-        return data;
+        return { data, source: 'live' };
       }
     }
-  } catch (err) {
-    console.warn(`[Lectern API] Fetch /api/lectures/${id} fell back to local offline dataset:`, err);
+  } catch {
+    // Network failure — explicit seeded fallback below, never silent.
   }
 
-  const found = FALLBACK_LECTURES.find((l) => l.id === id);
-  if (found) return found;
+  const fallback = getFallbackLecture(id);
+  if (fallback) {
+    return { data: fallback, source: 'fallback' };
+  }
   throw new Error(`Lecture with id "${id}" not found.`);
+}
+
+export async function fetchLecture(id: string): Promise<LectureDTO> {
+  const result = await fetchLectureWithSource(id);
+  if (result.source === 'live') {
+    return result.data;
+  }
+  const err = new BackendUnreachableError(`/api/lectures/${id}`);
+  (err as unknown as { fallbackLecture?: LectureDTO }).fallbackLecture = result.data;
+  throw err;
 }
 
 export async function uploadLecture(
@@ -476,7 +552,11 @@ export async function fetchProgress(lectureId: string): Promise<JobProgressDTO> 
   };
 }
 
-export async function askQuestion(question: string): Promise<QnAResponseDTO> {
+export type SourcedAnswer = QnAResponseDTO & { source: DataSource };
+
+export async function askQuestionWithSource(
+  question: string
+): Promise<SourcedResult<QnAResponseDTO>> {
   try {
     const res = await fetch('/api/qna', {
       method: 'POST',
@@ -487,14 +567,23 @@ export async function askQuestion(question: string): Promise<QnAResponseDTO> {
     if (res.ok) {
       const data: QnAResponseDTO = await res.json();
       if (data && data.citations && data.citations.length > 0) {
-        return data;
+        return { data, source: 'live' };
       }
     }
-  } catch (err) {
-    console.warn('[Lectern API] Q&A API call fell back to local offline semantic index:', err);
+  } catch {
+    // Network failure — explicit seeded fallback below, never silent.
   }
 
-  // Local semantic query matching over fallback corpus
+  return { data: buildLocalAnswer(question), source: 'fallback' };
+}
+
+export async function askQuestion(question: string): Promise<SourcedAnswer> {
+  const result = await askQuestionWithSource(question);
+  return { ...result.data, source: result.source };
+}
+
+function buildLocalAnswer(question: string): QnAResponseDTO {
+  // Local semantic query matching over the explicit seeded demo corpus.
   const q = question.toLowerCase().trim();
 
   if (
@@ -616,17 +705,24 @@ export async function askQuestion(question: string): Promise<QnAResponseDTO> {
   };
 }
 
-export async function fetchSystemStatus(): Promise<SystemStatusDTO> {
-  try {
-    const res = await fetch('/api/status', { cache: 'no-store' });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('[Lectern API] Status API call fell back to local offline hardware status:', err);
-  }
+export interface SystemDiagnostics extends SystemStatusDTO {
+  source: DataSource;
+  /** Whisper model label when the backend reports it (else hardcoded fallback). */
+  whisperModel?: string;
+  /** LLM throughput in tokens/sec; null/undefined renders as "—". */
+  llmTokensPerSec?: number | null;
+  /** Embedding model label when the backend reports it. */
+  embeddingsModel?: string;
+  ffmpegAvailable?: boolean;
+  ffmpegVersion?: string;
+  ollamaModels?: string[];
+  lastCheckedAt?: string;
+  vramUsedMB?: number;
+}
 
+function buildFallbackStatus(): SystemDiagnostics {
   return {
+    source: 'fallback',
     offline: true,
     gpuName: 'NVIDIA GeForce RTX 5060 Ti',
     vramTotalMB: 16384,
@@ -637,5 +733,74 @@ export async function fetchSystemStatus(): Promise<SystemStatusDTO> {
       llm: 'qwen2.5:14b',
       embeddings: 'nomic-embed-text',
     },
+    lastCheckedAt: new Date().toISOString(),
   };
+}
+
+export async function fetchSystemStatusWithSource(): Promise<
+  SourcedResult<SystemDiagnostics>
+> {
+  try {
+    const res = await fetch('/api/status', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        data: {
+          ...data,
+          source: 'live' as DataSource,
+          lastCheckedAt:
+            (data as Partial<SystemDiagnostics>)?.lastCheckedAt ?? new Date().toISOString(),
+        },
+        source: 'live',
+      };
+    }
+  } catch {
+    // Network failure — explicit seeded fallback below, never silent.
+  }
+
+  return { data: buildFallbackStatus(), source: 'fallback' };
+}
+
+export async function fetchSystemStatus(): Promise<SystemDiagnostics> {
+  const result = await fetchSystemStatusWithSource();
+  return result.data;
+}
+
+/**
+ * Seeds a live demo lecture on the backend for the 60s Judge-Mode flow.
+ * Resolves with the new lecture id, or throws BackendUnreachableError when
+ * the backend (or the seed route) is unavailable.
+ */
+export async function seedDemoLecture(): Promise<{ id: string }> {
+  let res: Response;
+  try {
+    res = await fetch('/api/lectures/seed-demo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+  } catch {
+    throw new BackendUnreachableError('/api/lectures/seed-demo');
+  }
+
+  if (!res.ok) {
+    throw new BackendUnreachableError(
+      '/api/lectures/seed-demo',
+      `Seed demo failed with status ${res.status} at /api/lectures/seed-demo`,
+      res.status
+    );
+  }
+
+  try {
+    const data = await res.json();
+    if (data && typeof data.id === 'string' && data.id.length > 0) {
+      return { id: data.id };
+    }
+  } catch {
+    // Fall through to the shape error below.
+  }
+  throw new BackendUnreachableError(
+    '/api/lectures/seed-demo',
+    'Seed demo returned an unexpected response shape (missing { id })'
+  );
 }

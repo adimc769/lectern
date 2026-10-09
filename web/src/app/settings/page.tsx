@@ -16,12 +16,17 @@ import {
   Lock,
   Trash2,
   Info,
+  Plane,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
-import type { SystemStatusDTO } from '@lectern/shared';
-import { fetchSystemStatus } from '../../lib/api';
+import type { SystemDiagnostics, DataSource } from '../../lib/api';
+import { fetchSystemStatusWithSource } from '../../lib/api';
+import { OfflineBadge } from '../../components/OfflineBadge';
 
 export default function SettingsPage() {
-  const [systemStatus, setSystemStatus] = useState<SystemStatusDTO | null>(null);
+  const [systemStatus, setSystemStatus] = useState<SystemDiagnostics | null>(null);
+  const [statusSource, setStatusSource] = useState<DataSource>('live');
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
   const [cacheCleared, setCacheCleared] = useState(false);
@@ -33,10 +38,24 @@ export default function SettingsPage() {
       setThemeMode(isDark ? 'dark' : 'light');
     }
 
-    fetchSystemStatus()
-      .then(setSystemStatus)
+    fetchSystemStatusWithSource()
+      .then((result) => {
+        setSystemStatus(result.data);
+        setStatusSource(result.source);
+      })
       .catch(() => {})
       .finally(() => setIsLoadingStatus(false));
+
+    const timer = setInterval(() => {
+      fetchSystemStatusWithSource()
+        .then((result) => {
+          setSystemStatus(result.data);
+          setStatusSource(result.source);
+        })
+        .catch(() => {});
+    }, 10000);
+
+    return () => clearInterval(timer);
   }, []);
 
   const handleThemeChange = (mode: 'light' | 'dark') => {
@@ -134,11 +153,28 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800/50">
-            <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-            Operational
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
+              Operational
+            </span>
+            <OfflineBadge source={statusSource} compact />
+          </div>
         </div>
+
+        <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] flex items-center gap-1.5">
+          {statusSource === 'live' ? (
+            <Wifi className="w-3 h-3 text-teal-600" />
+          ) : (
+            <WifiOff className="w-3 h-3 text-amber-600" />
+          )}
+          <span>
+            Source: {statusSource === 'live' ? 'live backend' : 'offline demo data'}
+            {systemStatus?.lastCheckedAt
+              ? ` • Last checked ${new Date(systemStatus.lastCheckedAt).toLocaleTimeString()}`
+              : ' • Last checked —'}
+          </span>
+        </p>
 
         {isLoadingStatus ? (
           <div className="py-8 text-center space-y-2">
@@ -158,10 +194,14 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div className="text-sm font-semibold text-[#0F172A] dark:text-white">
-                {systemStatus?.gpuName || 'NVIDIA GeForce RTX 5060 Ti'}
+                {systemStatus?.gpuName ?? 'NVIDIA GeForce RTX 5060 Ti'}
               </div>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                Dedicated VRAM: {systemStatus?.vramTotalMB ? Math.round(systemStatus.vramTotalMB / 1024) : 16} GB
+                Dedicated VRAM:{' '}
+                {systemStatus?.vramTotalMB ? Math.round(systemStatus.vramTotalMB / 1024) : 16} GB
+                {systemStatus?.vramUsedMB != null
+                  ? ` • ${Math.round(systemStatus.vramUsedMB / 1024)} GB in use`
+                  : ''}
               </p>
             </div>
 
@@ -171,12 +211,20 @@ export default function SettingsPage() {
                 <span className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium">
                   Speech-to-Text Model
                 </span>
-                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                  Ready
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                    (systemStatus?.whisperReady ?? true)
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                  }`}
+                >
+                  {(systemStatus?.whisperReady ?? true) ? 'Ready' : 'Unavailable'}
                 </span>
               </div>
               <div className="text-sm font-semibold text-[#0F172A] dark:text-white font-mono">
-                {systemStatus?.activeModels?.transcription || 'whisper-large-v3-turbo'}
+                {systemStatus?.whisperModel ??
+                  systemStatus?.activeModels?.transcription ??
+                  'whisper-large-v3-turbo'}
               </div>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
                 Acoustic segmentation with FP16 tensor core acceleration.
@@ -194,10 +242,12 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div className="text-sm font-semibold text-[#0F172A] dark:text-white font-mono">
-                {systemStatus?.activeModels?.llm || 'qwen2.5:14b (Ollama)'}
+                {systemStatus?.activeModels?.llm ?? 'qwen2.5:14b (Ollama)'}
               </div>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                Runs 4-bit quantized locally at ~48 tokens/second.
+                {systemStatus?.llmTokensPerSec != null
+                  ? `Runs 4-bit quantized locally at ~${systemStatus.llmTokensPerSec} tokens/second.`
+                  : 'Throughput: — (backend did not report tokens/sec)'}
               </p>
             </div>
 
@@ -212,14 +262,95 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div className="text-sm font-semibold text-[#0F172A] dark:text-white font-mono">
-                {systemStatus?.activeModels?.embeddings || 'nomic-embed-text'}
+                {systemStatus?.embeddingsModel ??
+                  systemStatus?.activeModels?.embeddings ??
+                  'nomic-embed-text'}
               </div>
               <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
                 768-dimensional local vector search via SQLite.
               </p>
             </div>
+
+            {/* FFmpeg */}
+            <div className="p-4 rounded-xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FAF9F5] dark:bg-[#19233C] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium">
+                  FFmpeg Audio Pipeline
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                    (systemStatus?.ffmpegAvailable ?? true)
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                  }`}
+                >
+                  {(systemStatus?.ffmpegAvailable ?? true) ? 'Available' : 'Missing'}
+                </span>
+              </div>
+              <div className="text-sm font-semibold text-[#0F172A] dark:text-white font-mono">
+                {systemStatus?.ffmpegVersion ?? 'ffmpeg (16kHz mono)'}
+              </div>
+              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                Converts uploads to 16kHz mono WAV before transcription.
+              </p>
+            </div>
+
+            {/* Ollama models */}
+            <div className="p-4 rounded-xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FAF9F5] dark:bg-[#19233C] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium">
+                  Ollama Models
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  {(systemStatus?.ollamaModels ?? []).length > 0
+                    ? `${systemStatus?.ollamaModels?.length} installed`
+                    : 'Default set'}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(systemStatus?.ollamaModels ?? [
+                  systemStatus?.activeModels?.llm ?? 'qwen2.5:14b',
+                  systemStatus?.embeddingsModel ??
+                    systemStatus?.activeModels?.embeddings ??
+                    'nomic-embed-text',
+                ]).map((model) => (
+                  <span
+                    key={model}
+                    className="px-2 py-0.5 rounded-lg text-[11px] font-mono bg-[#FFFFFF] dark:bg-[#131B2E] border border-[#E5E5DF] dark:border-[#1E293B] text-[#0F172A] dark:text-white"
+                  >
+                    {model}
+                  </span>
+                ))}
+              </div>
+              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                Pulled models served by the local Ollama runtime.
+              </p>
+            </div>
           </div>
         )}
+      </div>
+
+      {/* 2b. Airplane-mode ready card */}
+      <div className="rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] p-6 sm:p-7 shadow-xs">
+        <div className="flex items-start gap-3.5">
+          <div className="p-2.5 rounded-xl bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200 shrink-0">
+            <Plane className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold text-[#0F172A] dark:text-white flex items-center gap-2">
+              <span>Airplane-mode ready</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-200/80 text-teal-900 dark:bg-teal-900 dark:text-teal-100">
+                100% LOCAL
+              </span>
+            </h2>
+            <p className="text-xs sm:text-sm text-[#475569] dark:text-[#94A3B8] leading-relaxed">
+              Transcription, summarization, flashcards, and Q&amp;A all run on-device.
+              {statusSource === 'live'
+                ? ' Backend verified live — safe to go offline.'
+                : ' Currently showing seeded demo data — reconnect to verify live runtimes.'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* 3. Appearance / Theme Selector */}
