@@ -5,6 +5,7 @@ import path from 'path';
 import { prisma } from '../db.js';
 import { CONFIG } from '../config.js';
 import { pipelineOrchestrator } from '../services/pipelineOrchestrator.js';
+import { audioService } from '../services/audioService.js';
 import type { LectureDTO } from '@lectern/shared';
 
 function toPublicAudioPath(audioPath: string): string {
@@ -173,15 +174,26 @@ lectureRouter.post('/seed-demo', async (_req, res) => {
     }
 
     const audioPath = pickSeedAudioPath();
+    const probedDur = audioPath ? await audioService.getAudioDuration(audioPath) : 0;
+    const duration = probedDur > 0 ? probedDur : 60;
+    const scaledSegments = DEMO_SEGMENTS.map((s) => {
+      if (duration === 60) return { ...s };
+      const ratio = duration / 60;
+      return {
+        text: s.text,
+        startTime: Math.round(s.startTime * ratio * 100) / 100,
+        endTime: Math.round(s.endTime * ratio * 100) / 100,
+      };
+    });
 
     const lecture = await prisma.lecture.create({
       data: {
         title: DEMO_TITLE,
         audioPath,
-        duration: 60,
+        duration,
         status: 'COMPLETED',
         summary: DEMO_SUMMARY,
-        segments: { create: DEMO_SEGMENTS.map((s) => ({ ...s })) },
+        segments: { create: scaledSegments },
         flashcards: { create: DEMO_FLASHCARDS.map((f) => ({ ...f })) },
         keyTerms: { create: DEMO_KEY_TERMS.map((k) => ({ ...k })) },
       },

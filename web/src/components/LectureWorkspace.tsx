@@ -414,13 +414,26 @@ export function LectureWorkspace({
     }
   }, [activeSegmentIndex, autoScroll]);
 
-  // Filtered Segments for search
+  // Filtered Segments for search (clamped to true audio duration)
   const filteredSegments = useMemo(() => {
-    const list = lecture.segments || [];
-    if (!transcriptSearch.trim()) return list;
+    const rawList = lecture.segments || [];
+    const maxDur = audioDuration > 0 ? audioDuration : (lecture.duration || 0);
+
+    // Drop phantom segments past audio end, clamp segment timestamps to maxDur
+    const clampedList = maxDur > 0
+      ? rawList
+          .filter((s) => s.startTime < maxDur)
+          .map((s) => ({
+            ...s,
+            startTime: Math.min(s.startTime, Math.max(0, maxDur - 0.2)),
+            endTime: Math.min(s.endTime, maxDur),
+          }))
+      : rawList;
+
+    if (!transcriptSearch.trim()) return clampedList;
     const query = transcriptSearch.toLowerCase();
-    return list.filter((s) => s.text.toLowerCase().includes(query));
-  }, [lecture.segments, transcriptSearch]);
+    return clampedList.filter((s) => s.text.toLowerCase().includes(query));
+  }, [lecture.segments, transcriptSearch, audioDuration, lecture.duration]);
 
   // Copy Summary
   const handleCopySummary = () => {

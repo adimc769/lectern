@@ -221,10 +221,21 @@ export function TranscriptViewer({
   };
 
   const filteredSegments = useMemo(() => {
-    if (!searchQuery.trim()) return segments;
+    const rawList = segments || [];
+    const clampedList = totalDuration > 0
+      ? rawList
+          .filter((s) => s.startTime < totalDuration)
+          .map((s) => ({
+            ...s,
+            startTime: Math.min(s.startTime, Math.max(0, totalDuration - 0.2)),
+            endTime: Math.min(s.endTime, totalDuration),
+          }))
+      : rawList;
+
+    if (!searchQuery.trim()) return clampedList;
     const q = searchQuery.toLowerCase();
-    return segments.filter((s) => s.text.toLowerCase().includes(q));
-  }, [segments, searchQuery]);
+    return clampedList.filter((s) => s.text.toLowerCase().includes(q));
+  }, [segments, searchQuery, totalDuration]);
 
   return (
     <div

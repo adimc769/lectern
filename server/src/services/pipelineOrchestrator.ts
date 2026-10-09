@@ -321,9 +321,51 @@ export class PipelineOrchestrator {
 
       // Stage 2: Transcribing
       this.updateProgress(lectureId, 'TRANSCRIBING', 35, 'Running whisper-cli on GPU');
-      const segments = await whisperService.transcribe(wavPath, lectureId);
+      let segments = await whisperService.transcribe(wavPath, lectureId);
 
-      const duration = segments.length > 0 ? segments[segments.length - 1].endTime : 0;
+      // Determine true audio duration and clamp any overshooting segments
+      const actualDuration = await audioService.getAudioDuration(wavPath);
+      const rawDuration = segments.length > 0 ? segments[segments.length - 1].endTime : 0;
+      const duration = actualDuration > 0 ? actualDuration : rawDuration;
+
+      if (duration > 0 && segments.length > 0) {
+        // Drop phantom tail segments that start after the audio ends
+        const validSegments = segments.filter((s) => s.startTime < duration);
+
+        // Remove any phantom rows from SQLite
+        if (lectureId && validSegments.length < segments.length) {
+          await prisma.transcriptSegment.deleteMany({
+            where: {
+              lectureId,
+              startTime: { gte: duration },
+            },
+          });
+        }
+
+        // Clamp in-memory and database segment timestamps to audio duration
+        segments = validSegments.map((s) => {
+          const clampedStart = Math.round(Math.min(s.startTime, Math.max(0, duration - 0.2)) * 100) / 100;
+          const clampedEnd = Math.round(Math.min(s.endTime, duration) * 100) / 100;
+          return {
+            ...s,
+            startTime: clampedStart,
+            endTime: clampedEnd,
+          };
+        });
+
+        if (lectureId) {
+          for (const s of segments) {
+            await prisma.transcriptSegment.updateMany({
+              where: { id: s.id },
+              data: {
+                startTime: s.startTime,
+                endTime: s.endTime,
+              },
+            });
+          }
+        }
+      }
+
       await prisma.lecture.update({
         where: { id: lectureId },
         data: { duration },

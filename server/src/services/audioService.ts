@@ -61,6 +61,65 @@ export class AudioService {
 
     return resolvedOutput;
   }
+
+  /**
+   * Retrieves accurate audio duration in seconds using ffprobe, ffmpeg,
+   * or direct WAV PCM byte-length calculation.
+   */
+  async getAudioDuration(filePath: string): Promise<number> {
+    if (!fs.existsSync(filePath)) return 0;
+
+    // 1. Try ffprobe first
+    try {
+      const { stdout } = await execFileAsync('ffprobe', [
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        filePath,
+      ]);
+      const dur = parseFloat(stdout.trim());
+      if (!isNaN(dur) && dur > 0) {
+        return Math.round(dur * 100) / 100;
+      }
+    } catch {
+      // ffprobe failed, try ffmpeg
+    }
+
+    // 2. Try ffmpeg -i parsing stderr
+    try {
+      const { stderr } = await execFileAsync(this.ffmpegCmd, ['-i', filePath]);
+      const match = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+      if (match) {
+        const hours = parseInt(match[1], 10);
+        const mins = parseInt(match[2], 10);
+        const secs = parseFloat(match[3]);
+        const dur = hours * 3600 + mins * 60 + secs;
+        if (!isNaN(dur) && dur > 0) {
+          return Math.round(dur * 100) / 100;
+        }
+      }
+    } catch {
+      // Continue to WAV fallback
+    }
+
+    // 3. WAV fallback: 16kHz mono 16-bit PCM has 32000 bytes/sec
+    try {
+      if (filePath.toLowerCase().endsWith('.wav')) {
+        const stats = fs.statSync(filePath);
+        if (stats.size > 44) {
+          const dur = (stats.size - 44) / 32000;
+          return Math.round(dur * 100) / 100;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    return 0;
+  }
 }
 
 export const audioService = new AudioService();

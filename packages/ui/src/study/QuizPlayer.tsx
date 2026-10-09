@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, RotateCcw, Award } from 'lucide-react';
 import type { QuizQuestion } from '../types';
 
 /**
@@ -24,7 +24,7 @@ export interface ExamQuestionDTO {
   explanation: string;
   pageNo?: number | null;
   section?: string | null;
-  /** Present for lecture-backed questions; -1 / undefined hides the source chip. */
+  /** Legacy field retained for contract compatibility; citations are omitted in UI. */
   sourceStart?: number;
 }
 
@@ -46,13 +46,6 @@ export interface QuizPlayerProps {
   onFinish?: (result: QuizResult) => void;
 }
 
-function formatTimestamp(totalSeconds: number): string {
-  const safe = Math.max(0, Math.floor(totalSeconds));
-  const m = Math.floor(safe / 60);
-  const s = safe % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
 function formatDuration(totalSeconds: number): string {
   const safe = Math.max(0, Math.round(totalSeconds));
   const m = Math.floor(safe / 60);
@@ -67,12 +60,12 @@ function formatScore(score: number): string {
 }
 
 function encouragingLine(score: number, total: number): string {
-  if (total <= 0) return 'Circuit complete. Sharp work.';
+  if (total <= 0) return 'Quiz completed. Solid work.';
   const ratio = score / total;
-  if (ratio >= 1) return 'Flawless circuit. Sharp work.';
-  if (ratio >= 0.75) return `Nice — ${formatScore(score)} in a row territory. Nearly flawless.`;
-  if (ratio >= 0.5) return 'Solid lap. Review the tricky ones below.';
-  return "Two tricky ones left. You've got this — review and retry.";
+  if (ratio >= 1) return 'Flawless score! Exceptional retention.';
+  if (ratio >= 0.75) return 'Great performance! Nearly complete mastery.';
+  if (ratio >= 0.5) return 'Good attempt. Review the tricky questions below to lock it in.';
+  return 'Keep practicing — review the missed questions and try again.';
 }
 
 function isExamQuestion(q: PlayerQuestion): q is ExamQuestionDTO {
@@ -82,17 +75,6 @@ function isExamQuestion(q: PlayerQuestion): q is ExamQuestionDTO {
 function getQuestionType(q: PlayerQuestion): ExamQuestionType {
   if (!isExamQuestion(q)) return 'mcq';
   return q.qtype;
-}
-
-function getSourceStart(q: PlayerQuestion): number | undefined {
-  const raw = (q as { sourceStart?: unknown }).sourceStart;
-  return typeof raw === 'number' ? raw : undefined;
-}
-
-/** Doc-generated exam questions carry sourceStart -1 or undefined → chip hidden. */
-function shouldShowSource(q: PlayerQuestion): boolean {
-  const s = getSourceStart(q);
-  return typeof s === 'number' && s >= 0;
 }
 
 function normalizeTf(value: unknown): 'true' | 'false' | null {
@@ -131,13 +113,14 @@ function correctAnswerText(q: PlayerQuestion): string {
 type IdentMark = 'correct' | 'close' | 'missed';
 
 const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[#5B3DF5] dark:focus-visible:ring-[#9D86FF] focus-visible:ring-offset-2';
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F172A] dark:focus-visible:ring-white focus-visible:ring-offset-2';
+
+const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 export const QuizPlayer: React.FC<QuizPlayerProps> = ({
   lectureId,
   lectureTitle,
   questions,
-  onOpenSource,
   onFinish,
 }) => {
   const total = questions.length;
@@ -263,7 +246,6 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
     const q = questions[Math.min(index, total - 1)];
     if (!q) return;
     const t = getQuestionType(q);
-    // Skip global keys once this question is answered (mcq/tf lock; ident locks on mark).
     if (t === 'mcq' && selected !== null) return;
     if (t === 'tf' && tfSelected !== null) return;
     const onKey = (e: KeyboardEvent): void => {
@@ -298,10 +280,10 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
         role="region"
         aria-label={`Quiz: ${lectureTitle}`}
         data-lecture-id={lectureId}
-        className="rounded-[20px] bg-[#FFFFFF] p-8 text-center shadow-[0_8px_24px_rgba(34,28,58,0.10)] dark:bg-[#221C3A] dark:shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
+        className="rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] p-8 text-center shadow-xs"
       >
-        <p className="text-[20px] font-semibold text-[#221C3A] dark:text-[#F5F1FF]">
-          No quiz yet for this lecture.
+        <p className="text-base font-semibold text-[#0F172A] dark:text-white">
+          No quiz questions available for this material yet.
         </p>
       </section>
     );
@@ -315,49 +297,35 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
   const progressPct = Math.round((progressNow / total) * 100);
   const missedQuestions = questions.filter((q) => missedIds.includes(q.id));
 
-  const renderSourceChip = (q: PlayerQuestion): React.ReactNode => {
-    if (!shouldShowSource(q)) return null;
-    const start = getSourceStart(q) as number;
-    if (onOpenSource) {
-      return (
-        <button
-          type="button"
-          onClick={() => onOpenSource(start)}
-          aria-label={`Open transcript at ${formatTimestamp(start)}`}
-          className={`inline-flex min-h-[48px] items-center gap-2 rounded-full border border-[#5B3DF5]/40 px-4 py-2 text-[13px] font-semibold text-[#5B3DF5] motion-safe:transition-colors hover:bg-[#5B3DF5]/10 dark:border-[#9D86FF]/50 dark:text-[#9D86FF] dark:hover:bg-[#9D86FF]/10 ${FOCUS_RING}`}
-        >
-          <span aria-hidden="true">●</span>
-          From the lecture · {formatTimestamp(start)}
-        </button>
-      );
-    }
-    return (
-      <span className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-[#5B3DF5]/40 px-4 py-2 text-[13px] font-semibold text-[#5B3DF5] dark:border-[#9D86FF]/50 dark:text-[#9D86FF]">
-        <span aria-hidden="true">●</span>
-        From the lecture · {formatTimestamp(start)}
-      </span>
-    );
-  };
+  const isMcqCorrect =
+    currentType === 'mcq' &&
+    selected !== null &&
+    selected ===
+      (typeof (current as QuizQuestion).answerIndex === 'number'
+        ? (current as QuizQuestion).answerIndex
+        : (current as ExamQuestionDTO).answerIndex);
+
+  const isTfCorrect =
+    currentType === 'tf' &&
+    normalizeTf(tfSelected) !== null &&
+    normalizeTf(tfSelected) === normalizeTf(tfCorrectAnswer(current));
 
   return (
     <section
       role="region"
       aria-label={`Quiz: ${lectureTitle}`}
       data-lecture-id={lectureId}
-      className="rounded-[20px] bg-[#FFFFFF] p-5 shadow-[0_8px_24px_rgba(34,28,58,0.10)] sm:p-8 dark:bg-[#221C3A] dark:shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
+      className="rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] p-6 sm:p-8 shadow-xs space-y-6"
     >
       {/* Progress header */}
-      <div className="mb-5">
-        <div className="mb-2 flex items-center justify-between">
-          <p
-            aria-live="polite"
-            className="text-[13px] font-semibold tracking-wide text-[#6B6390] dark:text-[#B9B0D9]"
-          >
-            Q{progressNow}/{total}
-          </p>
-          <p className="max-w-[60%] truncate text-[13px] font-semibold text-[#6B6390] dark:text-[#B9B0D9]">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs font-semibold">
+          <span className="uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+            Question {progressNow} of {total}
+          </span>
+          <span className="max-w-[60%] truncate text-[#0F172A] dark:text-white">
             {lectureTitle}
-          </p>
+          </span>
         </div>
         <div
           role="progressbar"
@@ -365,21 +333,22 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
           aria-valuemin={0}
           aria-valuemax={total}
           aria-valuenow={progressNow}
-          className="h-2.5 w-full overflow-hidden rounded-full bg-[#5B3DF5]/15 dark:bg-[#9D86FF]/20"
+          className="h-2 w-full overflow-hidden rounded-full bg-[#F1F1EC] dark:bg-[#1E293B]"
         >
           <div
-            className="h-full rounded-full bg-[#5B3DF5] motion-safe:transition-[width] motion-safe:duration-200 dark:bg-[#9D86FF]"
+            className="h-full rounded-full bg-[#0F172A] dark:bg-white motion-safe:transition-[width] motion-safe:duration-200"
             style={{ width: `${progressPct}%` }}
           />
         </div>
       </div>
 
       {!showResults && current ? (
-        <div>
-          <h2 className="mb-5 text-[26px] font-bold leading-snug text-[#221C3A] sm:text-[30px] dark:text-[#F5F1FF]">
+        <div className="space-y-6">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A] dark:text-white leading-snug">
             {current.question}
           </h2>
 
+          {/* MCQ Option List */}
           {currentType === 'mcq' ? (
             <div className="flex flex-col gap-3" role="group" aria-label="Answer choices">
               {((current as QuizQuestion).choices ?? (current as ExamQuestionDTO).choices ?? []).map(
@@ -390,42 +359,54 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
                       : (current as ExamQuestionDTO).answerIndex;
                   const isCorrect = choiceIndex === answerIndex;
                   const isPicked = choiceIndex === selected;
-                  let style = 'border-[#5B3DF5]/30 bg-[#FFFFFF] text-[#221C3A] hover:border-[#5B3DF5] dark:border-[#9D86FF]/40 dark:bg-[#221C3A] dark:text-[#F5F1FF] dark:hover:border-[#9D86FF]';
-                  if (answered && isCorrect) {
-                    style =
-                      'border-[#0CA678] bg-[#0CA678]/15 text-[#221C3A] dark:border-[#3DDC97] dark:bg-[#3DDC97]/15 dark:text-[#F5F1FF]';
-                  } else if (answered && isPicked && !isCorrect) {
-                    style =
-                      'border-[#E64980] bg-[#E64980]/15 text-[#221C3A] dark:border-[#F783AC] dark:bg-[#F783AC]/15 dark:text-[#F5F1FF]';
-                  } else if (answered) {
-                    style =
-                      'border-[#6B6390]/25 bg-[#FFFFFF] text-[#221C3A] opacity-60 dark:border-[#B9B0D9]/25 dark:bg-[#221C3A] dark:text-[#F5F1FF]';
+
+                  let cardStyle =
+                    'border-[#E5E5DF] dark:border-[#1E293B] bg-[#FAF9F5]/40 dark:bg-[#182238]/40 hover:bg-[#FAF9F5] dark:hover:bg-[#1E293B] hover:border-[#CBD5E1] dark:hover:border-[#334155] text-[#0F172A] dark:text-white';
+                  let badgeStyle =
+                    'bg-[#E5E5DF] dark:bg-[#1E293B] text-[#475569] dark:text-[#CBD5E1]';
+
+                  if (answered) {
+                    if (isCorrect) {
+                      cardStyle =
+                        'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 font-semibold shadow-xs';
+                      badgeStyle = 'bg-emerald-500 text-white';
+                    } else if (isPicked && !isCorrect) {
+                      cardStyle =
+                        'border-rose-500 bg-rose-50/70 dark:bg-rose-950/40 text-rose-950 dark:text-rose-100 font-semibold shadow-xs';
+                      badgeStyle = 'bg-rose-500 text-white';
+                    } else {
+                      cardStyle =
+                        'border-[#E5E5DF]/60 dark:border-[#1E293B]/60 bg-transparent opacity-45 text-[#64748B] dark:text-[#94A3B8]';
+                      badgeStyle = 'bg-[#F1F1EC] dark:bg-[#1E293B] text-[#94A3B8]';
+                    }
                   }
+
                   return (
                     <button
                       key={choiceIndex}
                       type="button"
                       onClick={() => handleSelect(choiceIndex)}
-                      aria-label={`Choice ${choiceIndex + 1}: ${choice}`}
-                      className={`flex min-h-[48px] w-full items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left text-[20px] font-semibold motion-safe:transition-colors ${FOCUS_RING} ${style}`}
+                      aria-label={`Choice ${LETTERS[choiceIndex] || choiceIndex + 1}: ${choice}`}
+                      className={`flex min-h-[52px] w-full items-center gap-3.5 rounded-xl border p-4 text-left text-sm sm:text-base transition-colors cursor-pointer ${FOCUS_RING} ${cardStyle}`}
                     >
                       <span
                         aria-hidden="true"
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#5B3DF5]/10 text-[15px] font-bold text-[#5B3DF5] dark:bg-[#9D86FF]/15 dark:text-[#9D86FF]"
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${badgeStyle}`}
                       >
-                        {choiceIndex + 1}
+                        {LETTERS[choiceIndex] || choiceIndex + 1}
                       </span>
-                      <span className="flex-1">{choice}</span>
+                      <span className="flex-1 leading-relaxed">{choice}</span>
+
                       {answered && isCorrect && (
-                        <span className="inline-flex shrink-0 items-center gap-1 text-[15px] font-bold text-[#0CA678] dark:text-[#3DDC97]">
-                          <Check aria-hidden="true" className="h-5 w-5" />
+                        <span className="inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
+                          <Check aria-hidden="true" className="h-3.5 w-3.5" />
                           Correct
                         </span>
                       )}
                       {answered && isPicked && !isCorrect && (
-                        <span className="inline-flex shrink-0 items-center gap-1 text-[15px] font-bold text-[#E64980] dark:text-[#F783AC]">
-                          <X aria-hidden="true" className="h-5 w-5" />
-                          Not quite
+                        <span className="inline-flex shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200">
+                          <X aria-hidden="true" className="h-3.5 w-3.5" />
+                          Wrong
                         </span>
                       )}
                     </button>
@@ -435,25 +416,32 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
             </div>
           ) : null}
 
+          {/* True / False Option List */}
           {currentType === 'tf' ? (
-            <div className="flex flex-col gap-3 sm:flex-row" role="group" aria-label="True or false">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="group" aria-label="True or false">
               {(['True', 'False'] as const).map((label, i) => {
                 const expected = normalizeTf(tfCorrectAnswer(current));
                 const picked = normalizeTf(tfSelected);
                 const mine = normalizeTf(label);
                 const isCorrectOption = expected !== null && mine === expected;
                 const isPicked = tfSelected !== null && mine === picked;
-                let style = 'border-[#5B3DF5]/30 bg-[#FFFFFF] text-[#221C3A] hover:border-[#5B3DF5] dark:border-[#9D86FF]/40 dark:bg-[#221C3A] dark:text-[#F5F1FF] dark:hover:border-[#9D86FF]';
-                if (answered && isCorrectOption) {
-                  style =
-                    'border-[#0CA678] bg-[#0CA678]/15 text-[#221C3A] dark:border-[#3DDC97] dark:bg-[#3DDC97]/15 dark:text-[#F5F1FF]';
-                } else if (answered && isPicked && !isCorrectOption) {
-                  style =
-                    'border-[#E64980] bg-[#E64980]/15 text-[#221C3A] dark:border-[#F783AC] dark:bg-[#F783AC]/15 dark:text-[#F5F1FF]';
-                } else if (answered) {
-                  style =
-                    'border-[#6B6390]/25 bg-[#FFFFFF] text-[#221C3A] opacity-60 dark:border-[#B9B0D9]/25 dark:bg-[#221C3A] dark:text-[#F5F1FF]';
+
+                let cardStyle =
+                  'border-[#E5E5DF] dark:border-[#1E293B] bg-[#FAF9F5]/40 dark:bg-[#182238]/40 hover:bg-[#FAF9F5] dark:hover:bg-[#1E293B] text-[#0F172A] dark:text-white';
+
+                if (answered) {
+                  if (isCorrectOption) {
+                    cardStyle =
+                      'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 font-bold';
+                  } else if (isPicked && !isCorrectOption) {
+                    cardStyle =
+                      'border-rose-500 bg-rose-50/70 dark:bg-rose-950/40 text-rose-950 dark:text-rose-100 font-bold';
+                  } else {
+                    cardStyle =
+                      'border-[#E5E5DF]/60 dark:border-[#1E293B]/60 bg-transparent opacity-45 text-[#64748B] dark:text-[#94A3B8]';
+                  }
                 }
+
                 return (
                   <button
                     key={label}
@@ -461,25 +449,20 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
                     onClick={() => handleTfSelect(label)}
                     aria-label={`Answer ${label} (press ${i + 1})`}
                     aria-pressed={tfSelected === label}
-                    className={`flex min-h-[64px] flex-1 items-center justify-center gap-3 rounded-2xl border-2 px-4 py-4 text-[22px] font-bold motion-safe:transition-colors ${FOCUS_RING} ${style}`}
+                    className={`flex min-h-[60px] items-center justify-center gap-3 rounded-xl border p-4 text-base font-bold transition-colors cursor-pointer ${FOCUS_RING} ${cardStyle}`}
                   >
-                    <span
-                      aria-hidden="true"
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#5B3DF5]/10 text-[15px] font-bold text-[#5B3DF5] dark:bg-[#9D86FF]/15 dark:text-[#9D86FF]"
-                    >
-                      {i + 1}
-                    </span>
+                    <span className="text-xs text-[#64748B] dark:text-[#94A3B8] font-mono">[{i + 1}]</span>
                     <span>{label}</span>
                     {answered && isCorrectOption && (
-                      <span className="inline-flex shrink-0 items-center gap-1 text-[15px] font-bold text-[#0CA678] dark:text-[#3DDC97]">
-                        <Check aria-hidden="true" className="h-5 w-5" />
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                        <Check aria-hidden="true" className="h-4 w-4" />
                         Correct
                       </span>
                     )}
                     {answered && isPicked && !isCorrectOption && (
-                      <span className="inline-flex shrink-0 items-center gap-1 text-[15px] font-bold text-[#E64980] dark:text-[#F783AC]">
-                        <X aria-hidden="true" className="h-5 w-5" />
-                        Not quite
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-rose-700 dark:text-rose-300">
+                        <X aria-hidden="true" className="h-4 w-4" />
+                        Wrong
                       </span>
                     )}
                   </button>
@@ -488,21 +471,22 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
             </div>
           ) : null}
 
+          {/* Identification */}
           {currentType === 'identification' ? (
-            <div>
+            <div className="space-y-4">
               {!identSubmitted ? (
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     handleIdentSubmit();
                   }}
-                  className="flex flex-col gap-3"
+                  className="space-y-3"
                 >
                   <label
                     htmlFor={`ident-input-${current.id}`}
-                    className="text-[13px] font-semibold tracking-wide text-[#6B6390] dark:text-[#B9B0D9]"
+                    className="block text-xs font-semibold text-[#64748B] dark:text-[#94A3B8]"
                   >
-                    Type your answer, then press Enter or Submit.
+                    Type your answer and press Enter:
                   </label>
                   <input
                     id={`ident-input-${current.id}`}
@@ -511,203 +495,228 @@ export const QuizPlayer: React.FC<QuizPlayerProps> = ({
                     onChange={(e) => setIdentInput(e.target.value)}
                     placeholder="Type your answer…"
                     autoComplete="off"
-                    className={`min-h-[48px] w-full rounded-2xl border-2 border-[#5B3DF5]/30 bg-[#FFFFFF] px-4 py-3 text-[20px] font-semibold text-[#221C3A] placeholder:font-normal placeholder:text-[#6B6390]/70 dark:border-[#9D86FF]/40 dark:bg-[#221C3A] dark:text-[#F5F1FF] dark:placeholder:text-[#B9B0D9]/60 ${FOCUS_RING}`}
+                    className={`w-full rounded-xl border border-[#E5E5DF] dark:border-[#1E293B] bg-white dark:bg-[#131B2E] px-4 py-3 text-base font-semibold text-[#0F172A] dark:text-white placeholder:text-[#94A3B8] ${FOCUS_RING}`}
                   />
                   <div className="flex justify-end">
                     <button
                       type="submit"
                       disabled={identInput.trim().length === 0}
-                      aria-label="Submit identification answer"
-                      className={`min-h-[48px] rounded-2xl px-6 text-[15px] font-semibold motion-safe:transition-colors ${FOCUS_RING} ${
-                        identInput.trim().length > 0
-                          ? 'bg-[#5B3DF5] text-[#FFFFFF] hover:brightness-110 dark:bg-[#9D86FF] dark:text-[#1A1230]'
-                          : 'cursor-not-allowed bg-[#5B3DF5]/20 text-[#6B6390] dark:bg-[#9D86FF]/15 dark:text-[#B9B0D9]'
-                      }`}
+                      className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
                     >
                       Submit
                     </button>
                   </div>
                 </form>
               ) : (
-                <div aria-live="polite" className="rounded-2xl bg-[#5B3DF5]/5 p-4 dark:bg-[#9D86FF]/10">
-                  <p className="text-[15px] font-semibold leading-relaxed text-[#221C3A] dark:text-[#F5F1FF]">
-                    Your answer: “{identInput.trim()}”
-                  </p>
-                  <p className="mt-2 text-[15px] font-bold text-[#0CA678] dark:text-[#3DDC97]">
-                    Key: {isExamQuestion(current) && current.answer ? current.answer : '—'}
-                  </p>
+                <div aria-live="polite" className="rounded-xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FAF9F5] dark:bg-[#182238] p-5 space-y-3">
+                  <div className="text-sm font-semibold text-[#0F172A] dark:text-white">
+                    Your answer: <span className="font-normal italic">&ldquo;{identInput.trim()}&rdquo;</span>
+                  </div>
+                  <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                    Correct key: {isExamQuestion(current) && current.answer ? current.answer : '—'}
+                  </div>
                   {isExamQuestion(current) &&
                   Array.isArray(current.acceptableAnswers) &&
                   current.acceptableAnswers.length > 0 ? (
-                    <p className="mt-1 text-[15px] leading-relaxed text-[#6B6390] dark:text-[#B9B0D9]">
+                    <div className="text-xs text-[#64748B] dark:text-[#94A3B8]">
                       Also accepted: {current.acceptableAnswers.join(' · ')}
-                    </p>
+                    </div>
                   ) : null}
-                  <p className="mt-1 text-[15px] leading-relaxed text-[#6B6390] dark:text-[#B9B0D9]">
-                    {current.explanation}
-                  </p>
+                  {current.explanation && (
+                    <p className="text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed pt-1">
+                      {current.explanation}
+                    </p>
+                  )}
+
                   {identMark === null ? (
-                    <div className="mt-3">
-                      <p className="mb-2 text-[13px] font-semibold tracking-wide text-[#6B6390] dark:text-[#B9B0D9]">
-                        Mark yourself honestly:
+                    <div className="pt-3 border-t border-[#E5E5DF] dark:border-[#1E293B] space-y-2">
+                      <p className="text-xs font-semibold text-[#64748B] dark:text-[#94A3B8]">
+                        Did you get this correct?
                       </p>
-                      <div className="flex flex-col gap-2 sm:flex-row">
+                      <div className="flex flex-wrap gap-2.5">
                         <button
                           type="button"
                           onClick={() => handleIdentMark('correct')}
-                          aria-label="Mark identification as correct"
-                          className={`min-h-[48px] flex-1 rounded-2xl border-2 border-[#0CA678] px-4 text-[15px] font-semibold text-[#0CA678] motion-safe:transition-colors hover:bg-[#0CA678]/10 dark:border-[#3DDC97] dark:text-[#3DDC97] dark:hover:bg-[#3DDC97]/10 ${FOCUS_RING}`}
+                          className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                         >
-                          Correct
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Correct</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleIdentMark('close')}
-                          aria-label="Mark identification as close (half credit)"
-                          className={`min-h-[48px] flex-1 rounded-2xl border-2 border-[#5B3DF5] px-4 text-[15px] font-semibold text-[#5B3DF5] motion-safe:transition-colors hover:bg-[#5B3DF5]/10 dark:border-[#9D86FF] dark:text-[#9D86FF] dark:hover:bg-[#9D86FF]/10 ${FOCUS_RING}`}
+                          className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors cursor-pointer"
                         >
-                          Close (half)
+                          Close (half credit)
                         </button>
                         <button
                           type="button"
                           onClick={() => handleIdentMark('missed')}
-                          aria-label="Mark identification as missed"
-                          className={`min-h-[48px] flex-1 rounded-2xl border-2 border-[#E64980] px-4 text-[15px] font-semibold text-[#E64980] motion-safe:transition-colors hover:bg-[#E64980]/10 dark:border-[#F783AC] dark:text-[#F783AC] dark:hover:bg-[#F783AC]/10 ${FOCUS_RING}`}
+                          className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                         >
-                          Missed
+                          <X className="w-3.5 h-3.5" />
+                          <span>Wrong</span>
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="mt-3 text-[15px] font-semibold text-[#221C3A] dark:text-[#F5F1FF]">
-                      {identMark === 'correct'
-                        ? 'Marked correct — nice work.'
-                        : identMark === 'close'
-                          ? 'Marked close — half credit. It will appear in review.'
-                          : 'Marked missed — it will appear in review.'}
-                    </p>
+                    <div className="pt-2 text-xs font-semibold">
+                      {identMark === 'correct' ? (
+                        <span className="text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5" /> Marked correct
+                        </span>
+                      ) : identMark === 'close' ? (
+                        <span className="text-amber-700 dark:text-amber-300">
+                          Marked close (half credit)
+                        </span>
+                      ) : (
+                        <span className="text-rose-700 dark:text-rose-300 flex items-center gap-1">
+                          <X className="w-3.5 h-3.5" /> Marked wrong
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
             </div>
           ) : null}
 
+          {/* Feedback Section (Clean Correct / Wrong Banner, No Citations) */}
           {answered && currentType !== 'identification' && (
-            <div aria-live="polite" className="mt-5 rounded-2xl bg-[#5B3DF5]/5 p-4 dark:bg-[#9D86FF]/10">
-              <p className="text-[15px] font-semibold leading-relaxed text-[#221C3A] dark:text-[#F5F1FF]">
-                {currentType === 'mcq'
-                  ? selected ===
-                    (typeof (current as QuizQuestion).answerIndex === 'number'
-                      ? (current as QuizQuestion).answerIndex
-                      : (current as ExamQuestionDTO).answerIndex)
-                    ? 'Correct — nice work.'
-                    : `Not quite — the answer is “${correctAnswerText(current)}”.`
-                  : normalizeTf(tfSelected) !== null &&
-                      normalizeTf(tfSelected) === normalizeTf(tfCorrectAnswer(current))
-                    ? 'Correct — nice work.'
-                    : `Not quite — the answer is “${correctAnswerText(current)}”.`}
-              </p>
-              <p className="mt-1 text-[15px] leading-relaxed text-[#6B6390] dark:text-[#B9B0D9]">
-                {current.explanation}
-              </p>
-              {shouldShowSource(current) ? (
-                <div className="mt-3">{renderSourceChip(current)}</div>
-              ) : null}
+            <div
+              aria-live="polite"
+              className={`rounded-xl border p-4 sm:p-5 space-y-1.5 transition-all ${
+                isMcqCorrect || isTfCorrect
+                  ? 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/70 dark:bg-emerald-950/30'
+                  : 'border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/30'
+              }`}
+            >
+              {isMcqCorrect || isTfCorrect ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold text-sm text-emerald-800 dark:text-emerald-300">
+                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Correct</span>
+                  </div>
+                  {current.explanation && (
+                    <p className="text-xs sm:text-sm text-emerald-950/80 dark:text-emerald-200/90 leading-relaxed pt-0.5">
+                      {current.explanation}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold text-sm text-rose-800 dark:text-rose-300">
+                    <X className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                    <span>Wrong</span>
+                  </div>
+                  <p className="text-xs sm:text-sm font-semibold text-[#0F172A] dark:text-white pt-0.5">
+                    Correct answer:{' '}
+                    <span className="font-bold underline decoration-rose-400 dark:decoration-rose-500">
+                      {correctAnswerText(current)}
+                    </span>
+                  </p>
+                  {current.explanation && (
+                    <p className="text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed pt-1">
+                      {current.explanation}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {currentType === 'identification' && identSubmitted && shouldShowSource(current) ? (
-            <div className="mt-3">{renderSourceChip(current)}</div>
-          ) : null}
-
-          <div className="mt-5 flex justify-end">
+          {/* Next / Complete button */}
+          <div className="flex justify-end pt-2">
             <button
               type="button"
               onClick={handleNext}
               disabled={!answered}
               aria-label={safeIndex + 1 >= total ? 'See results' : 'Next question'}
-              className={`min-h-[48px] rounded-2xl px-6 text-[15px] font-semibold motion-safe:transition-colors ${FOCUS_RING} ${
-                answered
-                  ? 'bg-[#5B3DF5] text-[#FFFFFF] hover:brightness-110 dark:bg-[#9D86FF] dark:text-[#1A1230]'
-                  : 'cursor-not-allowed bg-[#5B3DF5]/20 text-[#6B6390] dark:bg-[#9D86FF]/15 dark:text-[#B9B0D9]'
-              }`}
+              className="px-6 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
             >
-              {safeIndex + 1 >= total ? 'See results' : 'Next'}
+              {safeIndex + 1 >= total ? 'See results' : 'Next question →'}
             </button>
           </div>
         </div>
       ) : null}
 
+      {/* Results View */}
       {showResults ? (
-        <div>
-          <div aria-live="polite" className="py-4 text-center">
-            <p className="text-[15px] font-semibold text-[#6B6390] dark:text-[#B9B0D9]">
-              Circuit complete · finished in {formatDuration(finalSeconds)}
+        <div className="space-y-6 text-center py-4">
+          <div aria-live="polite" className="space-y-2">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto mb-3">
+              <Award className="w-6 h-6" />
+            </div>
+            <p className="text-xs font-semibold text-[#64748B] dark:text-[#94A3B8]">
+              Completed in {formatDuration(finalSeconds)}
             </p>
-            <p className="mt-1 text-[44px] font-bold leading-tight text-[#221C3A] dark:text-[#F5F1FF]">
-              {formatScore(score)} / {total}
-            </p>
-            <p className="mt-2 text-[20px] font-semibold text-[#221C3A] dark:text-[#F5F1FF]">
+            <div className="text-4xl sm:text-5xl font-extrabold text-[#0F172A] dark:text-white tracking-tight">
+              {formatScore(score)}{' '}
+              <span className="text-xl sm:text-2xl font-normal text-[#94A3B8]">/ {total}</span>
+            </div>
+            <p className="text-sm sm:text-base font-medium text-[#475569] dark:text-[#CBD5E1] max-w-md mx-auto pt-1">
               {encouragingLine(score, total)}
             </p>
           </div>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <button
-              type="button"
-              onClick={() => setShowMissedReview((v) => !v)}
-              aria-expanded={showMissedReview}
-              className={`min-h-[48px] rounded-2xl border-2 border-[#5B3DF5] px-6 text-[15px] font-semibold text-[#5B3DF5] motion-safe:transition-colors hover:bg-[#5B3DF5]/10 dark:border-[#9D86FF] dark:text-[#9D86FF] dark:hover:bg-[#9D86FF]/10 ${FOCUS_RING}`}
-            >
-              {showMissedReview ? 'Hide missed review' : 'Review missed ones'}
-            </button>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            {missedQuestions.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowMissedReview((v) => !v)}
+                aria-expanded={showMissedReview}
+                className="px-5 py-2.5 rounded-xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FAF9F5] dark:bg-[#19233C] hover:bg-[#F4F4F0] dark:hover:bg-[#1E293B] text-[#0F172A] dark:text-white text-sm font-semibold transition-colors cursor-pointer"
+              >
+                {showMissedReview ? 'Hide missed review' : `Review ${missedQuestions.length} missed question${missedQuestions.length === 1 ? '' : 's'}`}
+              </button>
+            )}
             <button
               type="button"
               onClick={handleRetry}
               aria-label="Retry quiz"
-              className={`min-h-[48px] rounded-2xl bg-[#5B3DF5] px-6 text-[15px] font-semibold text-[#FFFFFF] motion-safe:transition-colors hover:brightness-110 dark:bg-[#9D86FF] dark:text-[#1A1230] ${FOCUS_RING}`}
+              className="px-6 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 shadow-xs"
             >
-              Retry
+              <RotateCcw className="w-4 h-4" />
+              <span>Retry quiz</span>
             </button>
           </div>
 
           {showMissedReview && (
-            <div className="mt-5 flex flex-col gap-3" aria-label="Missed questions review">
-              {missedQuestions.length === 0 ? (
-                <p className="rounded-2xl bg-[#0CA678]/10 p-4 text-center text-[15px] font-semibold text-[#0CA678] dark:bg-[#3DDC97]/10 dark:text-[#3DDC97]">
-                  Nothing missed — flawless circuit.
-                </p>
-              ) : (
-                missedQuestions.map((q) => {
-                  const t = getQuestionType(q);
-                  return (
-                    <div
-                      key={q.id}
-                      className="rounded-2xl border border-[#6B6390]/20 p-4 dark:border-[#B9B0D9]/20"
-                    >
-                      <p className="text-[15px] font-bold text-[#221C3A] dark:text-[#F5F1FF]">
-                        {q.question}
+            <div className="mt-6 text-left space-y-3 pt-6 border-t border-[#E5E5DF] dark:border-[#1E293B]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+                Missed questions review
+              </h3>
+              {missedQuestions.map((q) => {
+                const t = getQuestionType(q);
+                return (
+                  <div
+                    key={q.id}
+                    className="rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/40 dark:bg-rose-950/20 p-4 space-y-2"
+                  >
+                    <p className="text-sm font-bold text-[#0F172A] dark:text-white">
+                      {q.question}
+                    </p>
+                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                      {t === 'identification'
+                        ? `Key: ${correctAnswerText(q)}`
+                        : `Correct answer: ${correctAnswerText(q)}`}
+                    </p>
+                    {t === 'identification' &&
+                    isExamQuestion(q) &&
+                    Array.isArray(q.acceptableAnswers) &&
+                    q.acceptableAnswers.length > 0 ? (
+                      <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+                        Also accepted: {q.acceptableAnswers.join(' · ')}
                       </p>
-                      <p className="mt-2 text-[15px] font-semibold text-[#0CA678] dark:text-[#3DDC97]">
-                        {t === 'identification'
-                          ? `Key: ${correctAnswerText(q)}`
-                          : `Answer: ${correctAnswerText(q)}`}
-                      </p>
-                      {t === 'identification' &&
-                      isExamQuestion(q) &&
-                      Array.isArray(q.acceptableAnswers) &&
-                      q.acceptableAnswers.length > 0 ? (
-                        <p className="mt-1 text-[15px] leading-relaxed text-[#6B6390] dark:text-[#B9B0D9]">
-                          Also accepted: {q.acceptableAnswers.join(' · ')}
-                        </p>
-                      ) : null}
-                      <p className="mt-1 text-[15px] leading-relaxed text-[#6B6390] dark:text-[#B9B0D9]">
+                    ) : null}
+                    {q.explanation && (
+                      <p className="text-xs text-[#475569] dark:text-[#CBD5E1] leading-relaxed">
                         {q.explanation}
                       </p>
-                    </div>
-                  );
-                })
-              )}
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
