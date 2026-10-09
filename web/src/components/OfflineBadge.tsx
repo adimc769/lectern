@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { WifiOff, Wifi, Cpu, ShieldCheck, HardDriveDownload } from 'lucide-react';
+import { Cpu, HardDrive, Shield } from 'lucide-react';
 import { fetchSystemStatus } from '../lib/api';
 import type { SystemStatusDTO } from '@lectern/shared';
 
@@ -36,106 +36,95 @@ export function OfflineBadge({ compact = false, className = '' }: Props) {
 
   return (
     <div className={`relative inline-flex items-center gap-2 ${className}`}>
-      {/* Network / Privacy Status Badge */}
+      {/* Network / Air-Gap Status Indicator */}
       <button
         type="button"
         onClick={() => setIsDetailsOpen((prev) => !prev)}
         aria-expanded={isDetailsOpen}
         aria-label={
           isOnline
-            ? 'Network active. Local processing: Works either way, nothing leaves your device.'
-            : 'Strict offline air-gap active: all AI runs locally on this device.'
+            ? 'Network active. Local processing: zero data leaves device.'
+            : 'Strict air-gap active: offline mode.'
         }
-        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-950 focus:ring-indigo-500 cursor-pointer ${
+        className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-mono transition-colors border focus:outline-none focus:ring-1 focus:ring-zinc-600 cursor-pointer ${
           !isOnline
-            ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40 shadow-sm shadow-emerald-950/50 hover:bg-emerald-900/80'
-            : 'bg-slate-900/90 text-slate-300 border-slate-700/70 hover:bg-slate-800/90 hover:text-white'
+            ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/60 hover:bg-emerald-950/70'
+            : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-850 hover:text-white'
         }`}
       >
-        {!isOnline ? (
-          <>
-            <WifiOff className="w-3.5 h-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
-            <span className="font-semibold">Offline Mode</span>
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" aria-hidden="true" />
-            {!compact && (
-              <span className="hidden sm:inline text-emerald-400/90 text-[11px] font-normal border-l border-emerald-800/60 pl-2">
-                All AI runs on this device
-              </span>
-            )}
-          </>
-        ) : (
-          <>
-            <Wifi className="w-3.5 h-3.5 text-indigo-400 shrink-0" aria-hidden="true" />
-            <span className="font-medium text-slate-200">Local Privacy</span>
-            {!compact && (
-              <span className="hidden sm:inline text-slate-400 text-[11px] border-l border-slate-700/60 pl-2">
-                Works either way. Nothing leaves your device.
-              </span>
-            )}
-          </>
+        <span
+          className={`w-1.5 h-1.5 rounded-full ${
+            !isOnline ? 'bg-emerald-400' : 'bg-zinc-400'
+          }`}
+          aria-hidden="true"
+        />
+        <span>{!isOnline ? 'air-gapped' : 'local-only'}</span>
+        {!compact && (
+          <span className="hidden sm:inline text-zinc-500 font-sans text-[11px] border-l border-zinc-800 pl-2">
+            {!isOnline ? 'No network connection' : 'Zero data egress'}
+          </span>
         )}
       </button>
 
-      {/* GPU / Local Hardware acceleration tag */}
+      {/* Hardware Telemetry Tag */}
       <div
-        className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-mono font-medium bg-slate-900/90 text-slate-300 border border-slate-800"
-        title="Hardware: RTX 5060 Ti CUDA acceleration"
+        className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono text-zinc-400 bg-zinc-900 border border-zinc-800"
+        title="Local GPU: NVIDIA GeForce RTX 5060 Ti"
       >
-        <Cpu className="w-3.5 h-3.5 text-cyan-400" aria-hidden="true" />
-        <span className="text-slate-400">GPU:</span>
-        <span className="text-cyan-300 font-semibold">{systemStatus?.gpuName || 'RTX 5060 Ti'}</span>
+        <Cpu className="w-3.5 h-3.5 text-zinc-500" aria-hidden="true" />
+        <span className="text-zinc-300">RTX 5060 Ti</span>
+        <span className="text-zinc-500">&bull;</span>
+        <span className="text-zinc-400">16GB</span>
       </div>
 
-      {/* Expanded System Info Popover */}
+      {/* Hardware Diagnostics Popover */}
       {isDetailsOpen && (
         <div
           role="region"
-          aria-label="Hardware & Model Specs"
-          className="absolute right-0 top-full mt-2 w-80 rounded-xl bg-slate-900/95 border border-slate-800 p-4 shadow-2xl z-50 backdrop-blur-md text-xs space-y-3 animate-in fade-in slide-in-from-top-1 duration-150"
+          aria-label="Hardware & Model Diagnostics"
+          className="absolute right-0 top-full mt-2 w-80 rounded-lg bg-zinc-900 border border-zinc-800 p-4 shadow-2xl z-50 text-xs font-mono space-y-3"
         >
-          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-            <div className="flex items-center gap-1.5 text-white font-semibold">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Offline Architecture Specs</span>
-            </div>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-300 border border-emerald-800/50">
-              Air-Gapped Ready
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+            <span className="font-semibold text-zinc-200 flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-zinc-400" />
+              Runtime Telemetry
             </span>
+            <span className="text-[10px] text-zinc-500">STANDALONE</span>
           </div>
 
-          <div className="space-y-2 text-slate-300">
-            <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
-              <span className="text-slate-400">Internet Status:</span>
-              <span className={!isOnline ? 'text-emerald-400 font-semibold' : 'text-slate-300'}>
-                {!isOnline ? 'Fully Offline (Strict Airgap)' : 'Connected (No Cloud AI Used)'}
+          <div className="space-y-1.5 text-zinc-400">
+            <div className="flex justify-between items-center py-1 border-b border-zinc-850">
+              <span className="text-zinc-500">Air-Gap Status:</span>
+              <span className={!isOnline ? 'text-emerald-400 font-semibold' : 'text-zinc-300'}>
+                {!isOnline ? 'Active (Offline)' : 'Isolated (No egress)'}
               </span>
             </div>
-            <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
-              <span className="text-slate-400">Speech-to-Text:</span>
-              <span className="font-mono text-cyan-300">
-                {systemStatus?.activeModels.transcription || 'whisper-large-v3-turbo (CUDA)'}
+            <div className="flex justify-between items-center py-1 border-b border-zinc-850">
+              <span className="text-zinc-500">Whisper Backend:</span>
+              <span className="text-zinc-200">
+                {systemStatus?.activeModels.transcription || 'whisper.cpp (CUDA fp16)'}
               </span>
             </div>
-            <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
-              <span className="text-slate-400">Synthesis LLM:</span>
-              <span className="font-mono text-indigo-300">
+            <div className="flex justify-between items-center py-1 border-b border-zinc-850">
+              <span className="text-zinc-500">Ollama LLM:</span>
+              <span className="text-zinc-200">
                 {systemStatus?.activeModels.llm || 'qwen2.5:14b'}
               </span>
             </div>
-            <div className="flex justify-between items-center py-1 border-b border-slate-800/50">
-              <span className="text-slate-400">Embedding Model:</span>
-              <span className="font-mono text-emerald-300">
-                {systemStatus?.activeModels.embeddings || 'nomic-embed-text'}
+            <div className="flex justify-between items-center py-1 border-b border-zinc-850">
+              <span className="text-zinc-500">Embeddings:</span>
+              <span className="text-zinc-200">
+                {systemStatus?.activeModels.embeddings || 'nomic-embed-text (768d)'}
               </span>
             </div>
             <div className="flex justify-between items-center py-1">
-              <span className="text-slate-400">Dedicated VRAM:</span>
-              <span className="font-mono text-slate-200">16,283 MB</span>
+              <span className="text-zinc-500">Allocated VRAM:</span>
+              <span className="text-zinc-200">16,283 MB</span>
             </div>
           </div>
 
-          <p className="text-[11px] text-slate-500 pt-2 border-t border-slate-800 italic">
-            Zero external telemetry or cloud inference. All data stays strictly on your workstation.
+          <p className="text-[11px] text-zinc-500 pt-2 border-t border-zinc-800 font-sans">
+            All models execute within local system memory without cloud routing.
           </p>
         </div>
       )}

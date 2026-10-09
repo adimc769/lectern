@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Sparkles,
   RotateCw,
   ChevronLeft,
   ChevronRight,
@@ -10,9 +9,6 @@ import {
   XCircle,
   Shuffle,
   RotateCcw,
-  CreditCard,
-  HelpCircle,
-  Lightbulb,
   Keyboard,
   Layers,
 } from 'lucide-react';
@@ -29,7 +25,6 @@ export function FlashcardDeck({ flashcards = [], className = '' }: Props) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
 
-  // Keep deck synced with incoming props
   useEffect(() => {
     setDeck(flashcards);
     setCurrentIndex(0);
@@ -68,11 +63,10 @@ export function FlashcardDeck({ flashcards = [], className = '' }: Props) {
         return next;
       });
 
-      // Auto-advance to next card if marked mastered
       if (mastered && currentIndex < deck.length - 1) {
         setTimeout(() => {
           handleNext();
-        }, 300);
+        }, 200);
       }
     },
     [currentIndex, deck.length, handleNext]
@@ -92,7 +86,6 @@ export function FlashcardDeck({ flashcards = [], className = '' }: Props) {
     setMasteredIds(new Set());
   };
 
-  // Keyboard navigation: Space to flip, Arrow keys to switch
   useEffect(() => {
     if (!currentCard) return;
 
@@ -108,12 +101,18 @@ export function FlashcardDeck({ flashcards = [], className = '' }: Props) {
       } else if (e.code === 'ArrowLeft') {
         e.preventDefault();
         handlePrev();
+      } else if (e.key === '1') {
+        e.preventDefault();
+        toggleMastery(currentCard.id, false);
+      } else if (e.key === '2') {
+        e.preventDefault();
+        toggleMastery(currentCard.id, true);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentCard, handleFlip, handleNext, handlePrev]);
+  }, [currentCard, handleFlip, handleNext, handlePrev, toggleMastery]);
 
   const masteryPercent = useMemo(() => {
     if (deck.length === 0) return 0;
@@ -122,12 +121,8 @@ export function FlashcardDeck({ flashcards = [], className = '' }: Props) {
 
   if (deck.length === 0) {
     return (
-      <div className={`p-12 text-center rounded-2xl border border-slate-800 bg-slate-900/40 ${className}`}>
-        <HelpCircle className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-        <h4 className="text-base font-semibold text-slate-300">No Flashcards Available</h4>
-        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-          Flashcards are automatically synthesized from the lecture transcript by local AI models.
-        </p>
+      <div className={`p-10 text-center rounded-lg border border-zinc-800 bg-zinc-900/40 text-xs font-mono text-zinc-500 ${className}`}>
+        No flashcards extracted for this lecture.
       </div>
     );
   }
@@ -135,197 +130,152 @@ export function FlashcardDeck({ flashcards = [], className = '' }: Props) {
   return (
     <div
       role="region"
-      aria-label="Interactive Flashcard Study Deck"
-      className={`space-y-6 ${className}`}
+      aria-label="Flashcard Deck"
+      className={`space-y-4 ${className}`}
     >
-      {/* Deck Controls & Mastery Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-2xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm">
-        {/* Spaced Repetition Mastery */}
-        <div className="space-y-1.5 flex-1 max-w-md">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-white flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Study Progress</span>
-            </span>
-            <span className="font-mono text-indigo-300">
-              {masteredIds.size} of {deck.length} Mastered ({masteryPercent}%)
-            </span>
-          </div>
-
-          <div
-            role="progressbar"
-            aria-valuenow={masteryPercent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Deck mastery progress"
-            className="w-full h-2 rounded-full bg-slate-950 border border-slate-800 overflow-hidden"
-          >
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-300"
-              style={{ width: `${masteryPercent}%` }}
-            />
-          </div>
+      {/* Control bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg border border-zinc-850 bg-zinc-900/50 text-xs font-mono">
+        <div className="flex items-center gap-3">
+          <span className="text-zinc-400">
+            Card {currentIndex + 1} / {deck.length}
+          </span>
+          <span className="text-zinc-600">&bull;</span>
+          <span className="text-emerald-400">
+            {masteredIds.size} mastered ({masteryPercent}%)
+          </span>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={shuffleDeck}
-            aria-label="Shuffle card deck"
-            className="p-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850 transition-colors"
-            title="Shuffle cards"
+            aria-label="Shuffle cards"
+            className="p-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+            title="Shuffle deck"
           >
-            <Shuffle className="w-4 h-4" />
+            <Shuffle className="w-3.5 h-3.5" />
           </button>
 
           <button
             type="button"
             onClick={resetSession}
             aria-label="Reset deck session"
-            className="p-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-850 transition-colors"
-            title="Reset progress"
+            className="p-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
+            title="Reset session"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-3.5 h-3.5" />
           </button>
 
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 font-mono">
-            <Keyboard className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Space: Flip &bull; &larr; &rarr;: Navigate</span>
-          </div>
+          <span className="text-[10px] text-zinc-500 border-l border-zinc-800 pl-2">
+            Space: flip &bull; &larr; &rarr;: navigate
+          </span>
         </div>
       </div>
 
-      {/* Main Flashcard Stage */}
+      {/* 3D Card Stage */}
       {currentCard && (
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* Card Indicator */}
-          <div className="flex items-center justify-between text-xs text-slate-400 px-2">
-            <span className="font-mono font-semibold text-slate-300">
-              Card {currentIndex + 1} of {deck.length}
-            </span>
-            <div className="flex items-center gap-1.5">
-              {masteredIds.has(currentCard.id) ? (
-                <span className="flex items-center gap-1 text-emerald-400 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Mastered</span>
-                </span>
-              ) : (
-                <span className="text-slate-500">Learning</span>
-              )}
-            </div>
-          </div>
-
-          {/* 3D Flip Card Container */}
+        <div className="max-w-2xl mx-auto space-y-4">
           <div
             tabIndex={0}
             role="button"
             aria-pressed={isFlipped}
-            aria-label={`Flashcard ${currentIndex + 1} of ${deck.length}. ${
-              isFlipped ? 'Answer side displayed' : 'Question side displayed'
-            }. Press Space to flip.`}
+            aria-label={`Flashcard ${currentIndex + 1}. Press Space to flip.`}
             onClick={handleFlip}
-            className="perspective-1000 w-full h-80 sm:h-96 cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500 rounded-3xl"
+            className="perspective-1000 w-full h-72 sm:h-80 cursor-pointer outline-none focus:ring-1 focus:ring-zinc-600 rounded-xl"
           >
             <div
-              className={`relative w-full h-full duration-500 transform-style-preserve-3d transition-transform ${
+              className={`relative w-full h-full duration-300 transform-style-preserve-3d transition-transform ${
                 isFlipped ? 'rotate-y-180' : ''
               }`}
             >
               {/* Front Side: Question */}
-              <div className="absolute inset-0 backface-hidden w-full h-full rounded-3xl border border-slate-800 bg-gradient-to-b from-slate-900 to-slate-950 p-8 sm:p-10 shadow-2xl flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-950 text-indigo-300 border border-indigo-700/50">
-                    <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>QUESTION</span>
+              <div className="absolute inset-0 backface-hidden w-full h-full rounded-xl border border-zinc-800 bg-zinc-900 p-8 shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-zinc-500 uppercase tracking-wider font-semibold">
+                    QUESTION
                   </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Press Space to flip</span>
+                  <span className="text-zinc-600">Space to flip</span>
                 </div>
 
-                <div className="py-4 my-auto">
-                  <h3 className="text-xl sm:text-2xl font-bold text-white leading-relaxed">
+                <div className="py-2 my-auto">
+                  <h3 className="text-lg sm:text-xl font-medium text-zinc-100 leading-snug">
                     {currentCard.front}
                   </h3>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
-                  <span className="flex items-center gap-1.5 text-indigo-400">
-                    <RotateCw className="w-3.5 h-3.5" />
-                    <span>Click or tap to reveal answer</span>
+                <div className="pt-3 border-t border-zinc-850 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                  <span className="flex items-center gap-1">
+                    <RotateCw className="w-3 h-3 text-zinc-600" />
+                    <span>Flip card</span>
                   </span>
-                  <span className="font-mono text-[11px]">Spacebar</span>
+                  <span>[Space]</span>
                 </div>
               </div>
 
               {/* Back Side: Answer */}
-              <div className="absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-3xl border border-emerald-500/40 bg-gradient-to-b from-slate-900 to-slate-950 p-8 sm:p-10 shadow-2xl flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700/50">
-                    <Lightbulb className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>ANSWER</span>
+              <div className="absolute inset-0 backface-hidden rotate-y-180 w-full h-full rounded-xl border border-zinc-700 bg-zinc-900 p-8 shadow-sm flex flex-col justify-between">
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-emerald-400 uppercase tracking-wider font-semibold">
+                    ANSWER
                   </span>
-                  <span className="text-[11px] text-slate-500 font-mono">Click to flip back</span>
+                  <span className="text-zinc-600">Space to flip</span>
                 </div>
 
-                <div className="py-4 my-auto">
-                  <p className="text-base sm:text-lg text-slate-100 leading-relaxed font-normal">
+                <div className="py-2 my-auto">
+                  <p className="text-sm sm:text-base text-zinc-200 leading-relaxed font-normal">
                     {currentCard.back}
                   </p>
                 </div>
 
                 {/* Self-Rating Mastery Controls */}
                 <div
-                  className="pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3"
+                  className="pt-3 border-t border-zinc-850 flex items-center justify-between gap-3 font-mono text-xs"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
                     type="button"
                     onClick={() => toggleMastery(currentCard.id, false)}
-                    className="flex-1 py-2 px-3 rounded-xl bg-slate-900 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-800 hover:border-rose-800/60 text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 py-1.5 px-3 rounded bg-zinc-950 hover:bg-zinc-850 text-zinc-400 hover:text-zinc-200 border border-zinc-800 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <XCircle className="w-4 h-4 text-rose-400" />
-                    <span>Need Review</span>
+                    <span>1 Again</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => toggleMastery(currentCard.id, true)}
-                    className="flex-1 py-2 px-3 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-600/50 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-950/50 cursor-pointer"
+                    className="flex-1 py-1.5 px-3 rounded bg-zinc-100 hover:bg-white text-zinc-950 font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>Mastered!</span>
+                    <span>2 Mastered</span>
                   </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Navigation Controls */}
-          <div className="flex items-center justify-between pt-2">
+          {/* Stepper buttons */}
+          <div className="flex items-center justify-between text-xs font-mono">
             <button
               type="button"
               disabled={currentIndex === 0}
               onClick={handlePrev}
-              aria-label="Previous card in deck"
-              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white text-xs font-semibold border border-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              className="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-850 disabled:opacity-40 text-zinc-300 border border-zinc-800 transition-colors flex items-center gap-1"
             >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Previous</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Prev</span>
             </button>
 
-            <span className="text-xs text-slate-500 font-mono hidden sm:inline">
-              Use &larr; / &rarr; keys or buttons
+            <span className="text-zinc-600 text-[11px]">
+              Use keyboard arrows to navigate
             </span>
 
             <button
               type="button"
               disabled={currentIndex === deck.length - 1}
               onClick={handleNext}
-              aria-label="Next card in deck"
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-600/30 cursor-pointer disabled:cursor-not-allowed"
+              className="px-3 py-1.5 rounded bg-zinc-900 hover:bg-zinc-850 disabled:opacity-40 text-zinc-300 border border-zinc-800 transition-colors flex items-center gap-1"
             >
               <span>Next</span>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
