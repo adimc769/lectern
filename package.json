@@ -10,7 +10,7 @@
   "scripts": {
     "dev:server": "npm --workspace=server run dev",
     "dev:web": "npm --workspace=web run dev",
-    "dev": "npm run dev:server",
+    "dev": "concurrently -n \"SERVER,WEB\" -c \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:web\"",
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "db:generate": "npm --workspace=server run db:generate",

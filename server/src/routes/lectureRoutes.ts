@@ -6,6 +6,12 @@ import { CONFIG } from '../config.js';
 import { pipelineOrchestrator } from '../services/pipelineOrchestrator.js';
 import type { LectureDTO } from '@lectern/shared';
 
+function toPublicAudioPath(audioPath: string): string {
+  if (!audioPath) return '';
+  if (audioPath.startsWith('/uploads/')) return audioPath;
+  return `/uploads/${path.basename(audioPath)}`;
+}
+
 export const lectureRouter = Router();
 
 const storage = multer.diskStorage({
@@ -82,10 +88,11 @@ lectureRouter.get('/', async (_req, res) => {
       },
     });
 
+
     const mapped: LectureDTO[] = lectures.map((l) => ({
       id: l.id,
       title: l.title,
-      audioPath: l.audioPath,
+      audioPath: toPublicAudioPath(l.audioPath),
       duration: l.duration,
       status: l.status as LectureDTO['status'],
       summary: l.summary,
@@ -119,7 +126,7 @@ lectureRouter.get('/:id', async (req, res) => {
     const mapped: LectureDTO = {
       id: lecture.id,
       title: lecture.title,
-      audioPath: lecture.audioPath,
+      audioPath: toPublicAudioPath(lecture.audioPath),
       duration: lecture.duration,
       status: lecture.status as LectureDTO['status'],
       summary: lecture.summary,
