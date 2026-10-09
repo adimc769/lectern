@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, AlertCircle, BookOpen } from 'lucide-react';
@@ -8,7 +8,7 @@ import type { LectureDTO } from '@lectern/shared';
 import { fetchLecture } from '../../../lib/api';
 import { LectureWorkspace, type WorkspaceTab } from '../../../components/LectureWorkspace';
 
-export default function LectureDetailPage() {
+function LectureDetailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
 
@@ -81,5 +81,22 @@ export default function LectureDetailPage() {
       initialTab={tabParam || 'summary'}
       initialTimestamp={targetTimestamp}
     />
+  );
+}
+
+export default function LectureDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-24 text-center space-y-3">
+          <div className="w-6 h-6 border-2 border-[#0F172A] dark:border-white border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+            Opening lecture study workspace...
+          </p>
+        </div>
+      }
+    >
+      <LectureDetailContent />
+    </Suspense>
   );
 }

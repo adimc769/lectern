@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -37,7 +37,7 @@ const STARTER_PROMPTS = [
   'What is quantum computing?', // Demonstrates ungrounded state
 ];
 
-export default function AskPage() {
+function AskContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const focusedLectureId = searchParams.get('lectureId');
@@ -115,7 +115,7 @@ export default function AskPage() {
 
   const formatTimestamp = (totalSec: number) => {
     const mins = Math.floor(totalSec / 60);
-    const secs = Math.floor(totalSec % 60);
+    const secs = totalSec % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -332,5 +332,20 @@ export default function AskPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function AskPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-24 text-center space-y-3">
+          <div className="w-6 h-6 border-2 border-[#0F172A] dark:border-white border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Loading Ask Lectern...</p>
+        </div>
+      }
+    >
+      <AskContent />
+    </Suspense>
   );
 }
