@@ -159,6 +159,35 @@ export class EmbeddingService {
       }
     }
 
+    // Include ingested document chunks (PDF, DOCX, TXT notes) in cross-library search
+    if (!filterLectureId) {
+      try {
+        const docRows = await prisma.documentChunk.findMany({
+          include: { document: { select: { title: true } } },
+        });
+
+        for (const dr of docRows) {
+          try {
+            const vec = JSON.parse(dr.embeddingJson) as number[];
+            const sim = this.cosineSimilarity(queryEmbedding, vec);
+            scored.push({
+              id: dr.id,
+              lectureId: dr.documentId,
+              lectureTitle: dr.document?.title,
+              startTime: dr.pageNo,
+              endTime: dr.pageNo,
+              text: dr.text,
+              similarity: Math.round(sim * 1000) / 1000,
+            });
+          } catch {
+            // ignore parse error
+          }
+        }
+      } catch {
+        // ignore if documentChunk query fails
+      }
+    }
+
     scored.sort((x, y) => y.similarity - x.similarity);
     return scored.slice(0, k);
   }

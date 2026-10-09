@@ -238,6 +238,13 @@ function AskContent() {
                         {msg.citations.map((cite, cIdx) => {
                           const citeKey = `${msg.id}-cite-${cIdx}`;
                           const isExpanded = expandedCitationIds.has(citeKey);
+                          const isDoc = !lectures.some((l) => l.id === cite.lectureId);
+                          const targetHref = isDoc
+                            ? `/documents/${cite.lectureId}`
+                            : `/lectures/${cite.lectureId}?tab=transcript&t=${cite.startTime}`;
+                          const locLabel = isDoc
+                            ? (cite.startTime > 0 ? `Page ${cite.startTime}` : 'Document')
+                            : formatTimestamp(cite.startTime);
 
                           return (
                             <div
@@ -247,14 +254,14 @@ function AskContent() {
                               <div className="flex items-center justify-between gap-2">
                                 {/* Clickable jump link */}
                                 <Link
-                                  href={`/lectures/${cite.lectureId}?tab=transcript&t=${cite.startTime}`}
+                                  href={targetHref}
                                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F172A] dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                                 >
                                   <span className="truncate max-w-[220px] sm:max-w-md">
-                                    {cite.lectureTitle || 'Lecture'}
+                                    {cite.lectureTitle || (isDoc ? 'Document' : 'Lecture')}
                                   </span>
                                   <span className="px-1.5 py-0.5 rounded text-[11px] font-mono bg-[#E5E5DF] dark:bg-[#1E293B] text-[#475569] dark:text-[#94A3B8]">
-                                    {formatTimestamp(cite.startTime)}
+                                    {locLabel}
                                   </span>
                                   <ExternalLink className="w-3 h-3 text-[#94A3B8]" />
                                 </Link>

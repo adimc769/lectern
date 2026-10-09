@@ -48,6 +48,14 @@ const DEMO_FLASHCARDS = [
     front: 'When does a Raft leader commit a log entry?',
     back: 'Once a majority of servers have stored the entry, it is committed and applied in order.',
   },
+  {
+    front: 'What is the quorum requirement for a 5-node cluster?',
+    back: 'At least 3 nodes (majority) must agree to guarantee split-brain safety.',
+  },
+  {
+    front: 'Why are Raft election timeouts randomized?',
+    back: 'To prevent split-vote ties by ensuring one candidate times out and requests votes first.',
+  },
 ];
 
 const DEMO_KEY_TERMS = [
@@ -151,8 +159,15 @@ lectureRouter.post('/seed-demo', async (_req, res) => {
   try {
     const existing = await prisma.lecture.findFirst({
       where: { title: DEMO_TITLE },
+      include: { flashcards: true },
     });
     if (existing) {
+      if (existing.flashcards.length < DEMO_FLASHCARDS.length) {
+        await prisma.flashcard.deleteMany({ where: { lectureId: existing.id } });
+        await prisma.flashcard.createMany({
+          data: DEMO_FLASHCARDS.map((f) => ({ ...f, lectureId: existing.id })),
+        });
+      }
       res.status(200).json({ id: existing.id, status: existing.status });
       return;
     }
@@ -277,12 +292,105 @@ lectureRouter.get('/:id', async (req, res) => {
   }
 });
 
-// DELETE lecture
+// GET lecture quiz derived from flashcards (QuizQuestion projection)
+lectureRouter.get('/:id/quiz', async (req, res) => {
+  try {
+    const lecture = await prisma.lecture.findUnique({
+      where: { id: req.params.id },
+      include: {
+        flashcards: true,
+      },
+    });
+
+    if (!lecture) {
+      res.status(404).json({ error: 'Lecture not found' });
+      return;
+    }
+
+    const cards = lecture.flashcards ?? [];
+    if (cards.length < 4) {
+      res.json([]);
+      return;
+    }
+
+    const questions: Array<{
+      id: string;
+      question: string;
+      choices: [string, string, string, string];
+      answerIndex: number;
+      explanation: string;
+      sourceStart: number;
+    }> = [];
+
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+      const distractors = cards
+        .filter((_, j) => j !== i)
+        .map((c) => c.back)
+        .filter((back) => back !== card.back);
+      const uniqueDistractors = [...new Set(distractors)].slice(0, 3);
+      if (uniqueDistractors.length < 3) continue;
+
+      // Deterministic distribution of correct choice
+      const rawChoices = [card.back, ...uniqueDistractors];
+      const targetSlot = i % 4;
+      const choices: [string, string, string, string] = [
+        rawChoices[1],
+        rawChoices[2],
+        rawChoices[3],
+        rawChoices[1],
+      ];
+      // Place target at targetSlot and other 3 in remaining slots
+      const others = [rawChoices[1], rawChoices[2], rawChoices[3]];
+      let otherIdx = 0;
+      for (let s = 0; s < 4; s++) {
+        if (s === targetSlot) {
+          choices[s] = card.back;
+        } else {
+          choices[s] = others[otherIdx++] ?? rawChoices[1];
+        }
+      }
+
+      questions.push({
+        id: `quiz-${lecture.id}-${card.id}`,
+        question: card.front,
+        choices,
+        answerIndex: targetSlot,
+        explanation: `Concept from this lecture: ${card.back}`,
+        sourceStart: 0,
+      });
+    }
+
+    res.json(questions);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve lecture quiz', details: String(error) });
+  }
+});
+
+// DELETE lecture (cascade deletes segments, chunks, cards; cleans up audio)
 lectureRouter.delete('/:id', async (req, res) => {
   try {
+    const lecture = await prisma.lecture.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!lecture) {
+      res.status(404).json({ error: 'Lecture not found' });
+      return;
+    }
+
     await prisma.lecture.delete({
       where: { id: req.params.id },
     });
+
+    if (lecture.audioPath && fs.existsSync(lecture.audioPath)) {
+      try {
+        fs.unlinkSync(lecture.audioPath);
+      } catch {
+        // ignore cleanup error
+      }
+    }
+
     res.json({ success: true, message: 'Lecture deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete lecture', details: String(error) });

@@ -84,6 +84,14 @@ describe('Backend Pipeline Services', () => {
         expect.objectContaining({ method: 'POST' }),
       );
     });
+
+    it('ranks chunks by similarity score accurately', () => {
+      const query = [1, 0, 0];
+      const highSim = embedService.cosineSimilarity(query, [0.99, 0.05, 0]);
+      const lowSim = embedService.cosineSimilarity(query, [0.1, 0.9, 0]);
+      expect(highSim).toBeGreaterThan(lowSim);
+      expect(embedService.cosineSimilarity([0, 0, 0], query)).toBe(0);
+    });
   });
 
   describe('WhisperService parsing logic', () => {

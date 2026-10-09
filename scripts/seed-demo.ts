@@ -51,6 +51,14 @@ const DEMO_FLASHCARDS = [
     front: 'When does a Raft leader commit a log entry?',
     back: 'Once a majority of servers have stored the entry, it is committed and applied in order.',
   },
+  {
+    front: 'What is the quorum requirement for a 5-node cluster?',
+    back: 'At least 3 nodes (majority) must agree to guarantee split-brain safety.',
+  },
+  {
+    front: 'Why are Raft election timeouts randomized?',
+    back: 'To prevent split-vote ties by ensuring one candidate times out and requests votes first.',
+  },
 ];
 
 const DEMO_KEY_TERMS = [

@@ -71,9 +71,29 @@ export default function SettingsPage() {
     }
   };
 
-  const handleClearCache = () => {
+  const [clearedSummary, setClearedSummary] = useState<string | null>(null);
+
+  const handleClearCache = async () => {
+    try {
+      const res = await fetch('/api/status/clear-cache', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        const msg =
+          data.clearedFiles > 0
+            ? `Freed ${data.freedMB} MB (${data.clearedFiles} temp audio files cleared)`
+            : 'Cache clean (no orphaned conversions)';
+        setClearedSummary(msg);
+      } else {
+        setClearedSummary('Local cache cleared');
+      }
+    } catch {
+      setClearedSummary('Local cache cleared');
+    }
     setCacheCleared(true);
-    setTimeout(() => setCacheCleared(false), 3000);
+    setTimeout(() => {
+      setCacheCleared(false);
+      setClearedSummary(null);
+    }, 4000);
   };
 
   return (
@@ -455,7 +475,7 @@ export default function SettingsPage() {
             {cacheCleared ? (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
-                <span>Cache cleared</span>
+                <span>{clearedSummary || 'Cache cleared'}</span>
               </>
             ) : (
               <>

@@ -387,3 +387,13 @@ export async function getDocQuiz(docId: string): Promise<DocQuizQuestion[]> {
   }
   throw new Error('Document quiz returned an unexpected response shape (expected an array)');
 }
+
+export async function deleteDocument(docId: string): Promise<boolean> {
+  const res = await fetch(`/api/documents/${encodeURIComponent(docId)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, 'Failed to delete document'));
+  }
+  return true;
+}

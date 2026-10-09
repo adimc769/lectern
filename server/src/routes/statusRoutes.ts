@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { execFile } from 'node:child_process';
 import fs from 'fs';
+import path from 'node:path';
 import { promisify } from 'node:util';
 import { CONFIG } from '../config.js';
+import { prisma } from '../db.js';
 import type { SystemStatusDTO } from '@lectern/shared';
 
 export const statusRouter = Router();
@@ -170,6 +172,59 @@ statusRouter.get('/', async (_req, res) => {
   } catch {
     // Never throw 500: status must always answer 200 with safe fallbacks.
     res.status(200).json(fallbackStatus());
+  }
+});
+
+// POST /api/status/clear-cache — removes unreferenced temporary audio conversions from UPLOADS_DIR
+statusRouter.post('/clear-cache', async (_req, res) => {
+  try {
+    let clearedFiles = 0;
+    let freedBytes = 0;
+
+    if (fs.existsSync(CONFIG.UPLOADS_DIR)) {
+      const [lectures, docs] = await Promise.all([
+        prisma.lecture.findMany({ select: { audioPath: true } }),
+        prisma.document.findMany({ select: { filePath: true } }),
+      ]);
+
+      const activePaths = new Set<string>();
+      for (const l of lectures) {
+        if (l.audioPath) activePaths.add(path.resolve(l.audioPath));
+      }
+      for (const d of docs) {
+        if (d.filePath) activePaths.add(path.resolve(d.filePath));
+      }
+
+      const files = fs.readdirSync(CONFIG.UPLOADS_DIR);
+      for (const file of files) {
+        const fullPath = path.join(CONFIG.UPLOADS_DIR, file);
+        const resolved = path.resolve(fullPath);
+
+        // Remove only temp files, demo seeds, or non-active WAV conversions
+        if (!activePaths.has(resolved) && (file.includes('temp') || file.includes('demo-seed') || file.endsWith('.wav'))) {
+          try {
+            const stat = fs.statSync(fullPath);
+            if (stat.isFile()) {
+              freedBytes += stat.size;
+              fs.unlinkSync(fullPath);
+              clearedFiles++;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      clearedFiles,
+      freedBytes,
+      freedMB: Math.round((freedBytes / (1024 * 1024)) * 10) / 10,
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: 'Failed to clear cache', details: msg });
   }
 });
 

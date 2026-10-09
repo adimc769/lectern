@@ -804,3 +804,13 @@ export async function seedDemoLecture(): Promise<{ id: string }> {
     'Seed demo returned an unexpected response shape (missing { id })'
   );
 }
+
+export async function deleteLecture(id: string): Promise<boolean> {
+  const res = await fetch(`/api/lectures/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to delete lecture (${res.status})`);
+  }
+  return true;
+}

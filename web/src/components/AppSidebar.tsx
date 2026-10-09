@@ -13,6 +13,7 @@ import {
   GraduationCap,
   ChevronRight,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { fetchSystemStatus } from '../lib/api';
 import type { SystemStatusDTO } from '@lectern/shared';
@@ -26,6 +27,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: '/', icon: Home },
   { label: 'My Lectures', href: '/lectures', icon: BookOpen },
+  { label: 'Study Circuit', href: '/study', icon: Sparkles },
   { label: 'Ask Lectern', href: '/ask', icon: MessageSquare },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
