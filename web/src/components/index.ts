@@ -9,3 +9,7 @@ export { UploadPanel } from './UploadPanel';
 export { FlashcardsUI } from './FlashcardsUI';
 export { AskPanel } from './AskPanel';
 export { LectureViewer } from './LectureViewer';
+export { IntakeModal } from './IntakeModal';
+export { LectureWorkspace } from './LectureWorkspace';
+export { AppShell } from './AppShell';
+export { AppSidebar } from './AppSidebar';
