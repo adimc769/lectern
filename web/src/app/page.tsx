@@ -25,6 +25,7 @@ import type { LectureDTO } from '@lectern/shared';
 import type { DataSource } from '../lib/api';
 import {
   fetchLecturesWithSource,
+  fetchLecture,
   seedDemoLecture,
   notifyBackendFallback,
   getFallbackLectures,
@@ -40,6 +41,10 @@ export default function HomePage() {
   const [source, setSource] = useState<DataSource>('live');
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
+  const [lectureCounts, setLectureCounts] = useState<
+    Record<string, { cards: number; terms: number; segments: number }>
+  >({});
+  const [countsLoading, setCountsLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,6 +76,50 @@ export default function HomePage() {
     const timer = setTimeout(() => setSeedError(null), 5000);
     return () => clearTimeout(timer);
   }, [seedError]);
+
+  useEffect(() => {
+    if (lectures.length === 0) return;
+    let cancelled = false;
+    setCountsLoading(true);
+    Promise.all(
+      lectures.map(async (lecture) => {
+        try {
+          const detail = await fetchLecture(lecture.id);
+          return [
+            lecture.id,
+            {
+              cards: detail.flashcards?.length ?? 0,
+              terms: detail.keyTerms?.length ?? 0,
+              segments: detail.segments?.length ?? 0,
+            },
+          ] as const;
+        } catch {
+          return [
+            lecture.id,
+            {
+              cards: lecture.flashcards?.length ?? 0,
+              terms: lecture.keyTerms?.length ?? 0,
+              segments: lecture.segments?.length ?? 0,
+            },
+          ] as const;
+        }
+      })
+    )
+      .then((entries) => {
+        if (cancelled) return;
+        const next: Record<string, { cards: number; terms: number; segments: number }> = {};
+        for (const [id, counts] of entries) {
+          next[id] = counts;
+        }
+        setLectureCounts(next);
+      })
+      .finally(() => {
+        if (!cancelled) setCountsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lectures]);
 
   const handleSeedDemo = async () => {
     if (isSeeding) return;
@@ -351,65 +400,77 @@ export default function HomePage() {
         ) : (
           /* Compact Lecture List */
           <div className="rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] divide-y divide-[#F4F4F0] dark:divide-[#1E293B] overflow-hidden shadow-xs">
-            {recentLectures.map((lecture) => (
-              <div
-                key={lecture.id}
-                className="p-4 sm:px-6 hover:bg-[#FAF9F5] dark:hover:bg-[#182238] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-              >
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[#475569] dark:text-[#CBD5E1]">
-                    <span>Audio {formatAudioLength(lecture.duration || 0)}</span>
-                    {getProcessingMs(lecture) !== null && (
-                      <>
-                        <span>&bull;</span>
-                        <span>
-                          Processed in{' '}
-                          {formatProcessingTime(getProcessingMs(lecture) as number)}
-                        </span>
-                      </>
-                    )}
+            {recentLectures.map((lecture) => {
+              const counts = lectureCounts[lecture.id];
+              return (
+                <Link
+                  key={lecture.id}
+                  href={`/lectures/${lecture.id}`}
+                  className="p-4 sm:px-6 hover:bg-[#FAF9F5] dark:hover:bg-[#182238] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[#475569] dark:text-[#CBD5E1]">
+                      <span>Audio {formatAudioLength(lecture.duration || 0)}</span>
+                      {getProcessingMs(lecture) !== null && (
+                        <>
+                          <span>&bull;</span>
+                          <span>
+                            Processed in{' '}
+                            {formatProcessingTime(getProcessingMs(lecture) as number)}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <span className="text-sm font-semibold text-[#0F172A] dark:text-white hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors block truncate">
+                      {lecture.title}
+                    </span>
                   </div>
 
-                  <Link
-                    href={`/lectures/${lecture.id}`}
-                    className="text-sm font-semibold text-[#0F172A] dark:text-white hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors block truncate"
-                  >
-                    {lecture.title}
-                  </Link>
-                </div>
-
-                {/* Sub-tools Quick Jump */}
-                <div className="flex items-center gap-3 shrink-0 text-xs text-[#475569] dark:text-[#CBD5E1]">
-                  <Link
-                    href={`/lectures/${lecture.id}?tab=summary`}
-                    className="hover:text-[#0F172A] dark:hover:text-white flex items-center gap-1"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>Summary</span>
-                  </Link>
-
-                  <span>&bull;</span>
-
-                  <Link
-                    href={`/lectures/${lecture.id}?tab=transcript`}
-                    className="hover:text-[#0F172A] dark:hover:text-white flex items-center gap-1"
-                  >
-                    <FileAudio className="w-3.5 h-3.5" />
-                    <span>Transcript</span>
-                  </Link>
-
-                  <span>&bull;</span>
-
-                  <Link
-                    href={`/lectures/${lecture.id}?tab=flashcards`}
-                    className="hover:text-[#0F172A] dark:hover:text-white flex items-center gap-1"
-                  >
-                    <CreditCard className="w-3.5 h-3.5" />
-                    <span>Cards</span>
-                  </Link>
-                </div>
-              </div>
-            ))}
+                  {/* Count chips (static, no nested links) */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {countsLoading && !counts ? (
+                      <span
+                        className="text-sm text-[#475569] dark:text-[#CBD5E1]"
+                        aria-hidden="true"
+                      >
+                        …
+                      </span>
+                    ) : (
+                      counts && (
+                        <>
+                          {counts.cards > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#FAF9F5] dark:bg-[#1E293B] border border-[#E5E5DF] dark:border-[#1E293B] text-[#475569] dark:text-[#CBD5E1]">
+                              <CreditCard className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span>
+                                {counts.cards} {counts.cards === 1 ? 'card' : 'cards'}
+                              </span>
+                            </span>
+                          )}
+                          {counts.terms > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#FAF9F5] dark:bg-[#1E293B] border border-[#E5E5DF] dark:border-[#1E293B] text-[#475569] dark:text-[#CBD5E1]">
+                              <Bookmark className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span>
+                                {counts.terms} {counts.terms === 1 ? 'term' : 'terms'}
+                              </span>
+                            </span>
+                          )}
+                          {counts.segments > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[#FAF9F5] dark:bg-[#1E293B] border border-[#E5E5DF] dark:border-[#1E293B] text-[#475569] dark:text-[#CBD5E1]">
+                              <FileAudio className="w-3.5 h-3.5" aria-hidden="true" />
+                              <span>
+                                {counts.segments}{' '}
+                                {counts.segments === 1 ? 'segment' : 'segments'}
+                              </span>
+                            </span>
+                          )}
+                        </>
+                      )
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
