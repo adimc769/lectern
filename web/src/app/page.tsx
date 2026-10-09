@@ -342,6 +342,15 @@ export default function HomePage() {
                   {mostRecentLecture.summary}
                 </p>
               )}
+
+              {mostRecentLecture.status === 'COMPLETED' &&
+                mostRecentProcessingMs !== null &&
+                (mostRecentLecture.duration || 0) > 0 && (
+                  <p className="text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed">
+                    Transcribed {formatAudioLength(mostRecentLecture.duration || 0)} in{' '}
+                    {formatProcessingTime(mostRecentProcessingMs)} on your GPU
+                  </p>
+                )}
             </div>
 
             <Link
