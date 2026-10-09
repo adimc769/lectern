@@ -30,6 +30,9 @@ import {
   AlertCircle,
   ShieldCheck,
   Sparkles,
+  Download,
+  ChevronDown,
+  Printer,
 } from 'lucide-react';
 import type { LectureDTO, TranscriptSegmentDTO, FlashcardDTO, KeyTermDTO } from '@lectern/shared';
 import { fetchProgress, fetchLecture } from '../lib/api';
@@ -41,6 +44,85 @@ type Props = {
   initialTab?: WorkspaceTab;
   initialTimestamp?: number;
 };
+
+function slugifyTitle(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return slug || 'lecture';
+}
+
+function formatMmSs(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = Math.floor(totalSeconds % 60);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function buildLectureMarkdown(lecture: LectureDTO): string {
+  const lines: string[] = [];
+  lines.push(`# ${lecture.title}`);
+  lines.push('');
+
+  if (lecture.summary) {
+    lines.push('## Summary');
+    lines.push('');
+    lines.push(lecture.summary);
+    lines.push('');
+  }
+
+  if (lecture.keyTerms && lecture.keyTerms.length > 0) {
+    lines.push('## Key Terms');
+    lines.push('');
+    for (const kt of lecture.keyTerms) {
+      lines.push(`- **${kt.term}**: ${kt.definition}`);
+    }
+    lines.push('');
+  }
+
+  if (lecture.flashcards && lecture.flashcards.length > 0) {
+    lines.push('## Flashcards');
+    lines.push('');
+    lecture.flashcards.forEach((fc, i) => {
+      lines.push(`### Card ${i + 1}: ${fc.front}`);
+      lines.push('');
+      lines.push(fc.back);
+      lines.push('');
+    });
+  }
+
+  if (lecture.segments && lecture.segments.length > 0) {
+    lines.push('## Transcript');
+    lines.push('');
+    for (const seg of lecture.segments) {
+      lines.push(`[${formatMmSs(seg.startTime)}] ${seg.text}`);
+    }
+    lines.push('');
+  }
+
+  lines.push(`_Exported from Lectern (100% local) — ${new Date().toLocaleString()}_`);
+  return lines.join('\n');
+}
+
+function buildAnkiTsv(lecture: LectureDTO): string {
+  const clean = (s: string) => s.replace(/[\t\r\n]+/g, ' ').trim();
+  return (lecture.flashcards || [])
+    .map((fc) => `${clean(fc.front)}\t${clean(fc.back)}`)
+    .join('\n');
+}
+
+function downloadBlobFile(filename: string, mime: string, content: string): void {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export function LectureWorkspace({
   initialLecture,
@@ -65,6 +147,53 @@ export function LectureWorkspace({
 
   // Summary State
   const [isSummaryCopied, setIsSummaryCopied] = useState(false);
+
+  // Export Dropdown State (client-side only)
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isExportOpen) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setIsExportOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsExportOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isExportOpen]);
+
+  const handleExportMarkdown = () => {
+    downloadBlobFile(
+      `${slugifyTitle(lecture.title)}.md`,
+      'text/markdown;charset=utf-8',
+      buildLectureMarkdown(lecture)
+    );
+    setIsExportOpen(false);
+  };
+
+  const handleExportAnki = () => {
+    downloadBlobFile(
+      `${slugifyTitle(lecture.title)}.tsv`,
+      'text/tab-separated-values;charset=utf-8',
+      buildAnkiTsv(lecture)
+    );
+    setIsExportOpen(false);
+  };
+
+  const handleExportPrint = () => {
+    setIsExportOpen(false);
+    window.print();
+  };
 
   // Transcript State
   const [transcriptSearch, setTranscriptSearch] = useState('');
@@ -389,14 +518,103 @@ export function LectureWorkspace({
             <span>Back to My Lectures</span>
           </Link>
 
-          {/* Quick Cross-Lecture Q&A jump button */}
-          <Link
-            href={`/ask?lectureId=${lecture.id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF9F5] hover:bg-[#E5E5DF] dark:bg-[#19233C] dark:hover:bg-[#1E293B] border border-[#E5E5DF] dark:border-[#1E293B] text-xs font-semibold text-[#0F172A] dark:text-white transition-colors"
-          >
-            <MessageSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>Ask question about lecture</span>
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Primary: Study Circuit (study-first over reading tabs) */}
+            <Link
+              href={`/study/${lecture.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-semibold transition-colors shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Start studying</span>
+              <span className="sm:hidden">Study</span>
+            </Link>
+
+            {/* Quick Cross-Lecture Q&A jump button */}
+            <Link
+              href={`/ask?lectureId=${lecture.id}`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF9F5] hover:bg-[#E5E5DF] dark:bg-[#19233C] dark:hover:bg-[#1E293B] border border-[#E5E5DF] dark:border-[#1E293B] text-xs font-semibold text-[#0F172A] dark:text-white transition-colors"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span className="hidden sm:inline">Ask question about lecture</span>
+              <span className="sm:hidden">Ask</span>
+            </Link>
+
+            {/* Export dropdown (client-side only, from LectureDTO prop) */}
+            <div ref={exportMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsExportOpen((o) => !o)}
+                aria-expanded={isExportOpen}
+                aria-haspopup="menu"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${isExportOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {isExportOpen && (
+                <div
+                  role="menu"
+                  aria-label="Export lecture"
+                  className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] shadow-xs p-1.5 z-40"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleExportMarkdown}
+                    className="w-full flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-[#FAF9F5] dark:hover:bg-[#19233C] text-left transition-colors cursor-pointer"
+                  >
+                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <span>
+                      <span className="block text-xs font-semibold text-[#0F172A] dark:text-white">
+                        Markdown (.md)
+                      </span>
+                      <span className="block text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                        Summary, key terms, cards, transcript
+                      </span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleExportAnki}
+                    className="w-full flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-[#FAF9F5] dark:hover:bg-[#19233C] text-left transition-colors cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <span>
+                      <span className="block text-xs font-semibold text-[#0F172A] dark:text-white">
+                        Anki TSV (front⇥back)
+                      </span>
+                      <span className="block text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                        Import-ready spaced-repetition deck
+                      </span>
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleExportPrint}
+                    className="w-full flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-[#FAF9F5] dark:hover:bg-[#19233C] text-left transition-colors cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+                    <span>
+                      <span className="block text-xs font-semibold text-[#0F172A] dark:text-white">
+                        Print / PDF
+                      </span>
+                      <span className="block text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                        Open the browser print dialog
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2">

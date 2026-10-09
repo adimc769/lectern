@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import type { QuizQuestion } from '../types';

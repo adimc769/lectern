@@ -1,4 +1,4 @@
-import './study.css';
+'use client';
 
 export interface StudyMascotProps {
   message: string;

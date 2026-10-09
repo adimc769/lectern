@@ -1,3 +1,5 @@
+'use client';
+
 import {
   useCallback,
   useEffect,
@@ -11,7 +13,6 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { SourceChip } from './SourceChip';
 import { StudyMascot } from './StudyMascot';
 import { sortDueFirst } from './srs';
-import './study.css';
 
 export interface DeckPlayerCard {
   id: string;

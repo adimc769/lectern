@@ -1,5 +1,6 @@
+'use client';
+
 import { BookOpen } from 'lucide-react';
-import './study.css';
 
 export interface SourceChipProps {
   start: number;
