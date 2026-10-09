@@ -1,0 +1,348 @@
+/* Lectern Study Circuit — study.css (plain CSS, no CDN).
+ * Visual contract: packages/ui/DESIGN.md §2–§4, §6.
+ * Tokens: :root (light) + .dark overrides. Card flip, progress bar,
+ * confetti burst (≤1.2s), reduced-motion off-switch.
+ */
+
+:root {
+  --study-primary: #5b3df5;
+  --study-primary-ink: #ffffff;
+  --study-sun: #ffb020;
+  --study-mint: #0ca678;
+  --study-mint-strong: #08754f;
+  --study-rose: #e64980;
+  --study-rose-strong: #c2255c;
+  --study-bg: #fff9f0;
+  --study-card: #ffffff;
+  --study-ink: #221c3a;
+  --study-muted: #6b6390;
+  --study-shadow: 0 8px 24px rgba(34, 28, 58, 0.1);
+}
+
+.dark {
+  --study-primary: #9d86ff;
+  --study-primary-ink: #1a1230;
+  --study-sun: #ffc53d;
+  --study-mint: #3ddc97;
+  --study-mint-strong: #3ddc97;
+  --study-rose: #f783ac;
+  --study-rose-strong: #f783ac;
+  --study-bg: #161226;
+  --study-card: #221c3a;
+  --study-ink: #f5f1ff;
+  --study-muted: #b9b0d9;
+  --study-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- screen ---------- */
+
+.study-screen {
+  box-sizing: border-box;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 20px 32px;
+  background: var(--study-bg);
+  color: var(--study-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.study-screen :focus-visible {
+  outline: 3px solid var(--study-primary);
+  outline-offset: 2px;
+}
+
+.study-lecture-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--study-muted);
+  text-align: center;
+}
+
+.study-lap-note {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--study-ink);
+  text-align: center;
+}
+
+/* ---------- progress ---------- */
+
+.study-progress-wrap {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.study-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--study-muted) 25%, transparent);
+  overflow: hidden;
+}
+
+.study-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--study-primary);
+  transition: width 200ms ease;
+}
+
+.study-progress-text {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--study-muted);
+  text-align: center;
+}
+
+/* ---------- flip card ---------- */
+
+.study-flip-scene {
+  width: 100%;
+  max-width: 560px;
+  perspective: 1200px;
+}
+
+.study-flip-inner {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 300ms ease;
+  cursor: pointer;
+}
+
+.study-flip-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.study-flip-face {
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.study-flip-back {
+  transform: rotateY(180deg);
+}
+
+.study-card {
+  box-sizing: border-box;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 28px;
+  background: var(--study-card);
+  color: var(--study-ink);
+  border-radius: 20px;
+  box-shadow: var(--study-shadow);
+  text-align: center;
+}
+
+.study-card-text {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.35;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.study-hint {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--study-muted);
+}
+
+.study-chip-row {
+  display: flex;
+  justify-content: center;
+}
+
+/* slide-in for the next card */
+@keyframes study-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.study-slide-in {
+  animation: study-slide-in 220ms ease;
+}
+
+/* ---------- source chip ---------- */
+
+.study-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--study-mint);
+  background: transparent;
+  color: var(--study-mint-strong);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.study-chip-icon {
+  flex: none;
+}
+
+/* ---------- rating buttons ---------- */
+
+.study-actions {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  gap: 12px;
+}
+
+.study-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  background: var(--study-card);
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: var(--study-shadow);
+}
+
+.study-btn-got {
+  border-color: var(--study-mint);
+  color: var(--study-mint-strong);
+}
+
+.study-btn-learning {
+  border-color: var(--study-rose);
+  color: var(--study-rose-strong);
+}
+
+/* ---------- mascot ---------- */
+
+.study-mascot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.study-mascot-art {
+  display: block;
+}
+
+.study-mascot-message {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--study-ink);
+  max-width: 420px;
+}
+
+/* ---------- completion ---------- */
+
+.study-complete-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.study-complete-sub {
+  margin: 0;
+  font-size: 15px;
+  color: var(--study-muted);
+  text-align: center;
+}
+
+.study-screen .study-btn {
+  max-width: 320px;
+  width: 100%;
+}
+
+/* ---------- confetti (burst ≤ 1.2s) ---------- */
+
+.study-confetti {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  height: 0;
+  pointer-events: none;
+}
+
+.study-confetti-piece {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  animation: study-confetti-fall 1.1s ease-out forwards;
+}
+
+.study-confetti-piece:nth-child(3n) {
+  background: var(--study-sun);
+}
+
+.study-confetti-piece:nth-child(3n + 1) {
+  background: var(--study-mint);
+}
+
+.study-confetti-piece:nth-child(3n + 2) {
+  background: var(--study-primary);
+}
+
+@keyframes study-confetti-fall {
+  from {
+    opacity: 1;
+    transform: translateY(-8px) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(120px) rotate(300deg);
+  }
+}
+
+/* ---------- reduced motion: instant swap, no celebration ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .study-flip-inner {
+    transition: none;
+  }
+
+  .study-slide-in {
+    animation: none;
+  }
+
+  .study-progress-fill {
+    transition: none;
+  }
+
+  .study-confetti,
+  .study-confetti-piece {
+    animation: none;
+    display: none;
+  }
+}
