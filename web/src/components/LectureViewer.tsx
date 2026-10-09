@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import type { LectureDTO } from '@lectern/shared';
 import { TranscriptViewer } from './TranscriptViewer';
-import { FlashcardsUI } from './FlashcardsUI';
+import { FlashcardDeck } from './FlashcardDeck';
 
 export type LectureTab = 'summary' | 'keyTerms' | 'flashcards' | 'transcript';
 
@@ -338,7 +338,7 @@ export function LectureViewer({
           id="panel-flashcards"
           aria-labelledby="tab-flashcards"
         >
-          <FlashcardsUI flashcards={lecture.flashcards || []} />
+          <FlashcardDeck flashcards={lecture.flashcards || []} />
         </div>
       )}
 
