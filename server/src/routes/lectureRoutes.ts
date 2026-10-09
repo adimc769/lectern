@@ -1,8 +1,69 @@
 import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
 import { prisma } from '../db.js';
+import { CONFIG } from '../config.js';
+import { pipelineOrchestrator } from '../services/pipelineOrchestrator.js';
 import type { LectureDTO } from '@lectern/shared';
 
 export const lectureRouter = Router();
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, CONFIG.UPLOADS_DIR);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const safeName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}${ext}`;
+    cb(null, safeName);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
+});
+
+// POST new lecture audio (multipart upload)
+lectureRouter.post('/', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'No audio file provided in multipart upload' });
+      return;
+    }
+
+    const title =
+      (req.body.title as string | undefined)?.trim() ||
+      path.parse(req.file.originalname).name ||
+      'Untitled Lecture';
+
+    const lecture = await prisma.lecture.create({
+      data: {
+        title,
+        audioPath: req.file.path,
+        status: 'PROCESSING',
+      },
+    });
+
+    // Start background processing pipeline
+    pipelineOrchestrator.startPipeline(lecture.id, req.file.path);
+
+    res.status(201).json({ id: lecture.id, success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create lecture upload', details: String(error) });
+  }
+});
+
+// GET lecture processing progress
+lectureRouter.get('/:id/progress', async (req, res) => {
+  try {
+    const progress = await pipelineOrchestrator.getProgress(req.params.id);
+    res.json(progress);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve progress', details: String(error) });
+  }
+});
+
 
 // GET all lectures
 lectureRouter.get('/', async (_req, res) => {
