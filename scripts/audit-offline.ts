@@ -17,6 +17,7 @@ const IGNORED_DIRS = new Set([
   'node_modules',
   '.git',
   '.opencode',
+  '.next',
   'dist',
   'build',
   'coverage',
@@ -24,11 +25,11 @@ const IGNORED_DIRS = new Set([
   '.cache',
 ]);
 
-
 const IGNORED_FILES = new Set([
   'package-lock.json',
   'yarn.lock',
   'pnpm-lock.yaml',
+  'next-env.d.ts',
 ]);
 
 const SCANNED_EXTENSIONS = new Set([
