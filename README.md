@@ -1,7 +1,5 @@
 # Lectern — Offline Lecture Assistant
 
----
-
 ## Why Local AI?
 
 1. **Lectures are Long Audio**: A typical university lecture runs 60 to 120 minutes. Streaming massive audio files to cloud APIs (OpenAI Whisper, Gemini, etc.) is financially unsustainable for students and frequently fails on slow connections.
