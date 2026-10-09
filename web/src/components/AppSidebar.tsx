@@ -64,7 +64,7 @@ export function AppSidebar() {
           onClick={() => setMobileMenuOpen((prev) => !prev)}
           aria-expanded={mobileMenuOpen}
           aria-label="Toggle navigation menu"
-          className="p-2 rounded-md text-[#64748B] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F4F4F0] dark:hover:bg-[#1E293B] transition-colors"
+          className="p-2 rounded-md text-[#475569] hover:text-[#0F172A] dark:text-[#CBD5E1] dark:hover:text-white hover:bg-[#F4F4F0] dark:hover:bg-[#1E293B] transition-colors"
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -97,7 +97,7 @@ export function AppSidebar() {
               <div className="font-semibold text-base text-[#0F172A] dark:text-[#F8FAFC] tracking-tight">
                 Lectern
               </div>
-              <div className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-normal">
+              <div className="text-sm text-[#475569] dark:text-[#CBD5E1] font-normal">
                 Offline lecture assistant
               </div>
             </div>
@@ -119,7 +119,7 @@ export function AppSidebar() {
                   className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive
                       ? 'bg-[#F4F4F0] dark:bg-[#1E293B] text-[#0F172A] dark:text-white font-semibold'
-                      : 'text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#FAF9F5] dark:hover:bg-[#182238]'
+                      : 'text-[#475569] dark:text-[#CBD5E1] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#FAF9F5] dark:hover:bg-[#182238]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
@@ -127,7 +127,7 @@ export function AppSidebar() {
                       className={`w-4 h-4 ${
                         isActive
                           ? 'text-[#0F172A] dark:text-white'
-                          : 'text-[#64748B] dark:text-[#94A3B8]'
+                          : 'text-[#475569] dark:text-[#CBD5E1]'
                       }`}
                     />
                     <span>{item.label}</span>
@@ -156,15 +156,15 @@ export function AppSidebar() {
                   }`}
                   aria-hidden="true"
                 />
-                <span className="text-xs font-semibold text-[#0F172A] dark:text-white truncate">
+                <span className="text-sm font-semibold text-[#0F172A] dark:text-white truncate">
                   {isReady ? 'Offline-ready' : 'Local AI paused'}
                 </span>
               </div>
-              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] truncate pl-4">
+              <p className="text-sm text-[#475569] dark:text-[#CBD5E1] truncate pl-4">
                 {isReady ? 'Processing locally' : 'Check service status'}
               </p>
             </div>
-            <ChevronRight className="w-3.5 h-3.5 text-[#94A3B8] group-hover:text-[#0F172A] dark:group-hover:text-white transition-colors shrink-0" />
+            <ChevronRight className="w-3.5 h-3.5 text-[#475569] dark:text-[#CBD5E1] group-hover:text-[#0F172A] dark:group-hover:text-white transition-colors shrink-0" />
           </Link>
         </div>
       </aside>

@@ -64,7 +64,7 @@ export function AppShell({ children }: Props) {
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 md:left-auto md:right-6 md:translate-x-0 z-40 flex items-center gap-2.5 pl-3.5 pr-2 py-2 rounded-2xl bg-[#FFFFFF] dark:bg-[#131B2E] border border-[#E5E5DF] dark:border-[#1E293B] shadow-xs text-xs font-medium text-[#0F172A] dark:text-white max-w-[calc(100vw-2rem)]"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 md:left-auto md:right-6 md:translate-x-0 z-40 flex items-center gap-2.5 pl-3.5 pr-2 py-2 rounded-2xl bg-[#FFFFFF] dark:bg-[#131B2E] border border-[#E5E5DF] dark:border-[#1E293B] shadow-xs text-sm font-medium text-[#0F172A] dark:text-white max-w-[calc(100vw-2rem)]"
         >
           <WifiOff className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden="true" />
           <span className="truncate">{toast}</span>
@@ -72,7 +72,7 @@ export function AppShell({ children }: Props) {
             type="button"
             onClick={dismissToast}
             aria-label="Dismiss notification"
-            className="p-1.5 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-[#FAF9F5] dark:text-[#94A3B8] dark:hover:text-white dark:hover:bg-[#1E293B] transition-colors shrink-0 cursor-pointer"
+            className="p-1.5 rounded-lg text-[#475569] hover:text-[#0F172A] hover:bg-[#FAF9F5] dark:text-[#CBD5E1] dark:hover:text-white dark:hover:bg-[#1E293B] transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
