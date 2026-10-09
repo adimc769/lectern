@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Upload,
   Mic,
@@ -16,22 +17,81 @@ import {
   Bookmark,
   FileAudio,
   CheckCircle2,
+  Gavel,
+  Loader2,
+  X,
 } from 'lucide-react';
 import type { LectureDTO } from '@lectern/shared';
-import { fetchLectures } from '../lib/api';
+import type { DataSource } from '../lib/api';
+import {
+  fetchLecturesWithSource,
+  seedDemoLecture,
+  notifyBackendFallback,
+  getFallbackLectures,
+} from '../lib/api';
 import { IntakeModal } from '../components/IntakeModal';
+import { OfflineBadge } from '../components/OfflineBadge';
 
 export default function HomePage() {
+  const router = useRouter();
   const [lectures, setLectures] = useState<LectureDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isIntakeOpen, setIsIntakeOpen] = useState(false);
+  const [source, setSource] = useState<DataSource>('live');
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedError, setSeedError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLectures()
-      .then(setLectures)
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    let cancelled = false;
+    fetchLecturesWithSource()
+      .then((result) => {
+        if (cancelled) return;
+        setLectures(result.data);
+        setSource(result.source);
+        if (result.source === 'fallback') {
+          notifyBackendFallback();
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLectures(getFallbackLectures());
+        setSource('fallback');
+        notifyBackendFallback();
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!seedError) return;
+    const timer = setTimeout(() => setSeedError(null), 5000);
+    return () => clearTimeout(timer);
+  }, [seedError]);
+
+  const handleSeedDemo = async () => {
+    if (isSeeding) return;
+    setIsSeeding(true);
+    setSeedError(null);
+    try {
+      const { id } = await seedDemoLecture();
+      router.push(`/lectures/${id}`);
+    } catch {
+      const fallback = getFallbackLectures()[0];
+      notifyBackendFallback();
+      if (fallback) {
+        setSeedError('Backend unreachable — opened seeded demo data instead.');
+        router.push(`/lectures/${fallback.id}`);
+      } else {
+        setSeedError('Backend unreachable and no seeded demo data is available.');
+      }
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -52,6 +112,9 @@ export default function HomePage() {
   };
 
   const mostRecentLecture = lectures.length > 0 ? lectures[0] : null;
+  const recentLectures = mostRecentLecture
+    ? lectures.filter((lecture) => lecture.id !== mostRecentLecture.id)
+    : lectures;
 
   return (
     <div className="space-y-8">
@@ -75,6 +138,65 @@ export default function HomePage() {
           <span>Add lecture</span>
         </button>
       </div>
+
+      {/* Judge-Mode banner (below header) */}
+      <div className="rounded-2xl border border-teal-200 dark:border-teal-900/60 bg-teal-50/40 dark:bg-teal-950/20 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5 min-w-0">
+          <div className="p-2.5 rounded-xl bg-[#0F172A] dark:bg-white text-white dark:text-[#0F172A] shrink-0">
+            <Gavel className="w-5 h-5" />
+          </div>
+          <div className="space-y-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-bold text-[#0F172A] dark:text-white">
+                Judge Mode — 60s demo
+              </h2>
+              <OfflineBadge source={source} compact />
+            </div>
+            <p className="text-xs text-[#475569] dark:text-[#94A3B8] leading-relaxed max-w-xl">
+              One click seeds a live lecture on the backend, then opens the full study
+              workspace: summary, transcript, flashcards, and Q&amp;A.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSeedDemo}
+          disabled={isSeeding}
+          className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 disabled:opacity-60 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-wait shrink-0 shadow-xs"
+        >
+          {isSeeding ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Seeding live demo…</span>
+            </>
+          ) : (
+            <>
+              <Gavel className="w-4 h-4" />
+              <span>Load live demo lecture</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Seed error toast (5s auto-dismiss) */}
+      {seedError && (
+        <div
+          role="alert"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 pl-3.5 pr-2 py-2 rounded-2xl bg-[#FFFFFF] dark:bg-[#131B2E] border border-amber-200 dark:border-amber-900/60 shadow-xs text-xs font-medium text-[#0F172A] dark:text-white max-w-[calc(100vw-2rem)]"
+        >
+          <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden="true" />
+          <span className="truncate">{seedError}</span>
+          <button
+            type="button"
+            onClick={() => setSeedError(null)}
+            aria-label="Dismiss notification"
+            className="p-1.5 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-[#FAF9F5] dark:text-[#94A3B8] dark:hover:text-white dark:hover:bg-[#1E293B] transition-colors shrink-0 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Primary Intake Quick Area */}
       <div className="rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] p-6 sm:p-8 shadow-xs space-y-4">
@@ -210,7 +332,7 @@ export default function HomePage() {
         ) : (
           /* Compact Lecture List */
           <div className="rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] divide-y divide-[#F4F4F0] dark:divide-[#1E293B] overflow-hidden shadow-xs">
-            {lectures.map((lecture) => (
+            {recentLectures.map((lecture) => (
               <div
                 key={lecture.id}
                 className="p-4 sm:px-6 hover:bg-[#FAF9F5] dark:hover:bg-[#182238] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
