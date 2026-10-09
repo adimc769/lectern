@@ -219,7 +219,7 @@ export const Transcript: React.FC<TranscriptProps> = ({
     if (!autoScroll || activeSegmentIndex === -1) return;
     const el = segmentRefs.current.get(activeSegmentIndex);
     if (el && containerRef.current) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      el.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
     }
   }, [activeSegmentIndex, autoScroll]);
 
@@ -294,12 +294,17 @@ export const Transcript: React.FC<TranscriptProps> = ({
           <div className="relative flex-1 flex items-center group">
             <input
               type="range"
+              aria-label="Audio playback seek position"
+              aria-valuemin={0}
+              aria-valuemax={duration || 1}
+              aria-valuenow={Math.round(activeTime)}
+              aria-valuetext={`${formatTime(activeTime)} of ${formatTime(duration)}`}
               min={0}
               max={duration || 1}
               step={0.5}
               value={activeTime}
               onChange={(e) => handleSeek(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none"
+              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <span className="font-mono text-xs font-semibold text-slate-400 w-11">
@@ -372,6 +377,11 @@ export const Transcript: React.FC<TranscriptProps> = ({
               </button>
               <input
                 type="range"
+                aria-label="Audio narration volume"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round((isMuted ? 0 : volume) * 100)}
+                aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)} percent`}
                 min={0}
                 max={1}
                 step={0.05}
@@ -380,7 +390,7 @@ export const Transcript: React.FC<TranscriptProps> = ({
                   setVolume(parseFloat(e.target.value));
                   if (isMuted) setIsMuted(false);
                 }}
-                className="w-16 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hidden sm:inline-block"
+                className="w-16 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hidden sm:inline-block focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
               />
             </div>
@@ -452,7 +462,11 @@ export const Transcript: React.FC<TranscriptProps> = ({
 
         {/* Live Audio Narration Status Bar */}
         {isPlaying && (
-          <div className="flex items-center justify-between text-[11px] text-slate-300 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-indigo-900/50">
+          <div
+            aria-live="polite"
+            aria-atomic="true"
+            className="flex items-center justify-between text-[11px] text-slate-300 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-indigo-900/50"
+          >
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               <span className="text-emerald-300 font-medium">

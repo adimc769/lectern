@@ -57,6 +57,8 @@ export const OfflineBadge: React.FC<OfflineBadgeProps> = ({
             ? 'Offline mode: all AI runs on this device'
             : 'Works either way. Nothing leaves your device.'
         }
+        aria-expanded={isPopoverOpen}
+        aria-haspopup="dialog"
       >
         {/* Pulsing Status Dot */}
         <span className="relative flex h-2 w-2">

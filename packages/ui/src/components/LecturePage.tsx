@@ -197,7 +197,7 @@ export const LecturePage: React.FC<LecturePageProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 pt-4 overflow-x-auto no-scrollbar">
+        <div role="tablist" aria-label="Lecture study views" className="flex items-center gap-2 pt-4 overflow-x-auto no-scrollbar">
           {[
             {
               id: 'summary',
@@ -229,12 +229,17 @@ export const LecturePage: React.FC<LecturePageProps> = ({
               <button
                 key={tab.id}
                 type="button"
+                role="tab"
+                id={`tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`panel-${tab.id}`}
+                tabIndex={isActive ? 0 : -1}
                 onClick={() =>
                   setActiveTab(
                     tab.id as 'summary' | 'keyTerms' | 'flashcards' | 'transcript'
                   )
                 }
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                   isActive
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/60'
                     : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
@@ -259,7 +264,12 @@ export const LecturePage: React.FC<LecturePageProps> = ({
 
       {/* Tab 1: Summary */}
       {activeTab === 'summary' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+        <div
+          role="tabpanel"
+          id="panel-summary"
+          aria-labelledby="tab-summary"
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6"
+        >
           <div className="flex items-center justify-between pb-4 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-400" />
@@ -309,7 +319,12 @@ export const LecturePage: React.FC<LecturePageProps> = ({
 
       {/* Tab 2: Key Terms */}
       {activeTab === 'keyTerms' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+        <div
+          role="tabpanel"
+          id="panel-keyTerms"
+          aria-labelledby="tab-keyTerms"
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Bookmark className="w-5 h-5 text-indigo-400" />
@@ -362,7 +377,12 @@ export const LecturePage: React.FC<LecturePageProps> = ({
 
       {/* Tab 3: Flashcards (Flip cards) */}
       {activeTab === 'flashcards' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6">
+        <div
+          role="tabpanel"
+          id="panel-flashcards"
+          aria-labelledby="tab-flashcards"
+          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl space-y-6"
+        >
           {/* Top toolbar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
             <div>
@@ -550,12 +570,14 @@ export const LecturePage: React.FC<LecturePageProps> = ({
 
       {/* Tab 4: Transcript */}
       {activeTab === 'transcript' && (
-        <Transcript
-          segments={lecture.transcript || []}
-          lectureTitle={lecture.title}
-          audioUrl={lecture.audioUrl}
-          initialSeekTo={initialSeekTo}
-        />
+        <div role="tabpanel" id="panel-transcript" aria-labelledby="tab-transcript">
+          <Transcript
+            segments={lecture.transcript || []}
+            lectureTitle={lecture.title}
+            audioUrl={lecture.audioUrl}
+            initialSeekTo={initialSeekTo}
+          />
+        </div>
       )}
     </div>
   );

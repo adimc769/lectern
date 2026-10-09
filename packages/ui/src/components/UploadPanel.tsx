@@ -300,7 +300,7 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
       <div className="p-6">
         {/* If currently submitting or processing, show the active Progress Panel */}
         {isSubmitting && progress ? (
-          <div className="space-y-6 py-4 animate-in fade-in duration-200">
+          <div aria-live="polite" className="space-y-6 py-4 animate-in fade-in duration-200">
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2.5">
                 {STAGE_DESCRIPTIONS[progress.status]?.icon ?? (
@@ -316,7 +316,14 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
             </div>
 
             {/* Visual Progress Bar */}
-            <div className="w-full bg-slate-800/90 rounded-full h-3 overflow-hidden border border-slate-700/50 p-0.5">
+            <div
+              role="progressbar"
+              aria-label="Offline lecture processing progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progress.percent)}
+              className="w-full bg-slate-800/90 rounded-full h-3 overflow-hidden border border-slate-700/50 p-0.5"
+            >
               <div
                 className={`h-full rounded-full transition-all duration-500 bg-gradient-to-r ${
                   STAGE_DESCRIPTIONS[progress.status]?.color ?? 'from-indigo-500 to-indigo-600'
@@ -391,6 +398,8 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
               <div>
                 <input
                   ref={fileInputRef}
+                  id="lecture-file-input"
+                  aria-label="Upload lecture audio or video file"
                   type="file"
                   accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.webm,.mp4,.ogg,.flac"
                   className="hidden"
@@ -402,11 +411,20 @@ export const UploadPanel: React.FC<UploadPanelProps> = ({
                 />
 
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Drop audio or video lecture here, or press enter to browse files"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 ${
+                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                     isDragging
                       ? 'border-indigo-400 bg-indigo-950/30 scale-[1.01]'
                       : selectedFile

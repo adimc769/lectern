@@ -22,6 +22,10 @@ All dependencies for the Lectern UI package are fully local, self-contained, and
 | `tailwindcss` | `^3.4.17` | Utility-first CSS framework for clean, high-contrast, modern responsive styling (processed locally at build time). |
 | `postcss` | `^8.4.49` | PostCSS processor for Tailwind CSS. |
 | `autoprefixer` | `^10.4.20` | PostCSS plugin for vendor prefixes. |
+| `vitest` | `^3.0.7` | Fast native unit & behavioral test runner. |
+| `@testing-library/react` | `^16.2.0` | Accessible DOM testing for React components following WAI-ARIA and user behavior patterns. |
+| `@testing-library/dom` | `^10.4.0` | DOM querying utilities by accessible role, label, and text. |
+| `jsdom` | `^26.0.0` | In-memory headless DOM environment for local offline component testing. |
 
 ## External Assets & Privacy Guarantees
 - **Fonts**: Strictly uses a system font stack (`system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`). No Google Fonts or remote font downloads.

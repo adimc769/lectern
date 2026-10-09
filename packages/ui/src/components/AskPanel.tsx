@@ -66,7 +66,7 @@ export const AskPanel: React.FC<AskPanelProps> = ({
 
   // Auto scroll to latest message
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView?.({ behavior: 'smooth' });
   }, [messages, isAsking]);
 
   // Sync initial question if changed
@@ -173,7 +173,12 @@ export const AskPanel: React.FC<AskPanelProps> = ({
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+      <div
+        role="log"
+        aria-label="Conversation with offline lecture assistant"
+        aria-live="polite"
+        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5"
+      >
         {messages.map((msg) => {
           const isUser = msg.sender === 'user';
 
@@ -352,6 +357,7 @@ export const AskPanel: React.FC<AskPanelProps> = ({
             <input
               ref={inputRef}
               type="text"
+              aria-label="Question prompt across all lectures"
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               onKeyDown={handleKeyDown}
