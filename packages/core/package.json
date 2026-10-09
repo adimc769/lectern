@@ -7,8 +7,10 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "try-pipeline": "tsx ../../scripts/try-pipeline.ts"
+    "try-pipeline": "tsx ../../scripts/try-pipeline.ts",
+    "audit": "tsx ../../scripts/audit-offline.ts"
   },
+
 
   "devDependencies": {
     "@types/node": "^20.17.0",
