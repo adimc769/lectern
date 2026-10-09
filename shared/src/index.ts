@@ -57,6 +57,12 @@ export interface LectureDTO {
   chunks?: ChunkDTO[];
   flashcards?: FlashcardDTO[];
   keyTerms?: KeyTermDTO[];
+  _count?: {
+    segments?: number;
+    flashcards?: number;
+    keyTerms?: number;
+    chunks?: number;
+  };
 }
 
 export interface JobProgressDTO {

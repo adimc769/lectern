@@ -222,6 +222,7 @@ lectureRouter.get('/', async (_req, res) => {
     const lectures = await prisma.lecture.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
+        keyTerms: true,
         _count: {
           select: {
             segments: true,
@@ -233,7 +234,6 @@ lectureRouter.get('/', async (_req, res) => {
       },
     });
 
-
     const mapped: LectureDTO[] = lectures.map((l) => ({
       id: l.id,
       title: l.title,
@@ -243,6 +243,13 @@ lectureRouter.get('/', async (_req, res) => {
       summary: l.summary,
       createdAt: l.createdAt.toISOString(),
       updatedAt: l.updatedAt.toISOString(),
+      keyTerms: l.keyTerms.map((k) => ({
+        id: k.id,
+        lectureId: k.lectureId,
+        term: k.term,
+        definition: k.definition,
+      })),
+      _count: l._count,
     }));
 
     res.json(mapped);
@@ -296,6 +303,11 @@ lectureRouter.get('/:id', async (req, res) => {
         term: k.term,
         definition: k.definition,
       })),
+      _count: {
+        segments: lecture.segments.length,
+        flashcards: lecture.flashcards.length,
+        keyTerms: lecture.keyTerms.length,
+      },
     };
 
     res.json(mapped);

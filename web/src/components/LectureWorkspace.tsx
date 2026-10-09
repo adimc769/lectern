@@ -707,7 +707,7 @@ export function LectureWorkspace({
             <FileAudio className="w-4 h-4 text-teal-600 dark:text-teal-400" />
             <span>Transcript</span>
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#FAF9F5] dark:bg-[#1E293B] text-[#64748B] dark:text-[#94A3B8]">
-              {lecture.segments?.length || 0}
+              {lecture._count?.segments ?? lecture.segments?.length ?? 0}
             </span>
           </button>
 
@@ -725,7 +725,7 @@ export function LectureWorkspace({
             <Layers className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             <span>Flashcards</span>
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#FAF9F5] dark:bg-[#1E293B] text-[#64748B] dark:text-[#94A3B8]">
-              {lecture.flashcards?.length || 0}
+              {lecture._count?.flashcards ?? lecture.flashcards?.length ?? 0}
             </span>
           </button>
 
@@ -743,7 +743,7 @@ export function LectureWorkspace({
             <Bookmark className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Key Terms</span>
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-[#FAF9F5] dark:bg-[#1E293B] text-[#64748B] dark:text-[#94A3B8]">
-              {lecture.keyTerms?.length || 0}
+              {lecture._count?.keyTerms ?? lecture.keyTerms?.length ?? 0}
             </span>
           </button>
         </div>
@@ -853,7 +853,7 @@ export function LectureWorkspace({
                 onClick={() => setActiveTab('flashcards')}
                 className="px-3 py-1 rounded-lg bg-[#FAF9F5] dark:bg-[#19233C] hover:bg-[#E5E5DF] dark:hover:bg-[#1E293B] text-xs font-medium text-[#0F172A] dark:text-white transition-colors"
               >
-                Practice with {lecture.flashcards?.length || 0} flashcards
+                Practice with {lecture._count?.flashcards ?? lecture.flashcards?.length ?? 0} flashcards
               </button>
             </div>
           </div>

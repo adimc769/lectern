@@ -23,7 +23,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { LectureDTO } from '@lectern/shared';
-import { fetchLectures, deleteLecture } from '../../lib/api';
+import { fetchLecturesWithSource, deleteLecture } from '../../lib/api';
 import {
   fetchDocuments,
   fetchDocumentProgress,
@@ -170,8 +170,8 @@ export default function MyLecturesPage() {
   };
 
   useEffect(() => {
-    fetchLectures()
-      .then(setLectures)
+    fetchLecturesWithSource()
+      .then(({ data }) => setLectures(data))
       .catch(() => {})
       .finally(() => setIsLoading(false));
     loadDocuments();
@@ -486,9 +486,9 @@ export default function MyLecturesPage() {
             }
             const lecture = item.lecture;
             const isCompleted = lecture.status === 'COMPLETED';
-            const cardsCount = lecture.flashcards?.length || 0;
-            const termsCount = lecture.keyTerms?.length || 0;
-            const segmentsCount = lecture.segments?.length || 0;
+            const cardsCount = lecture._count?.flashcards ?? lecture.flashcards?.length ?? 0;
+            const termsCount = lecture._count?.keyTerms ?? lecture.keyTerms?.length ?? 0;
+            const segmentsCount = lecture._count?.segments ?? lecture.segments?.length ?? 0;
 
             return (
               <div

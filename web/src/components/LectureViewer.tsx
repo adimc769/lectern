@@ -136,7 +136,7 @@ export function LectureViewer({
             }`}
           >
             <Bookmark className="w-3.5 h-3.5" />
-            <span>Key Terms ({lecture.keyTerms?.length || 0})</span>
+            <span>Key Terms ({lecture._count?.keyTerms ?? lecture.keyTerms?.length ?? 0})</span>
           </button>
 
           <button
@@ -153,7 +153,7 @@ export function LectureViewer({
             }`}
           >
             <CreditCard className="w-3.5 h-3.5" />
-            <span>Flashcards ({lecture.flashcards?.length || 0})</span>
+            <span>Flashcards ({lecture._count?.flashcards ?? lecture.flashcards?.length ?? 0})</span>
           </button>
 
           <button
@@ -170,7 +170,7 @@ export function LectureViewer({
             }`}
           >
             <FileAudio className="w-3.5 h-3.5" />
-            <span>Transcript ({lecture.segments?.length || 0})</span>
+            <span>Transcript ({lecture._count?.segments ?? lecture.segments?.length ?? 0})</span>
           </button>
         </div>
       </div>

@@ -63,26 +63,58 @@ export default function HomePage() {
   useEffect(() => {
     if (lectures.length === 0) return;
     let cancelled = false;
+
+    // Immediately resolve counts from lecture._count or existing arrays
+    const immediate: Record<string, { cards: number; terms: number; segments: number }> = {};
+    const missing: LectureDTO[] = [];
+
+    for (const l of lectures) {
+      if (l._count) {
+        immediate[l.id] = {
+          cards: l._count.flashcards ?? 0,
+          terms: l._count.keyTerms ?? 0,
+          segments: l._count.segments ?? 0,
+        };
+      } else if (l.flashcards || l.keyTerms || l.segments) {
+        immediate[l.id] = {
+          cards: l.flashcards?.length ?? 0,
+          terms: l.keyTerms?.length ?? 0,
+          segments: l.segments?.length ?? 0,
+        };
+      } else {
+        missing.push(l);
+      }
+    }
+
+    if (Object.keys(immediate).length > 0) {
+      setLectureCounts((prev) => ({ ...prev, ...immediate }));
+    }
+
+    if (missing.length === 0) {
+      setCountsLoading(false);
+      return;
+    }
+
     setCountsLoading(true);
     Promise.all(
-      lectures.map(async (lecture) => {
+      missing.map(async (lecture) => {
         try {
           const detail = await fetchLecture(lecture.id);
           return [
             lecture.id,
             {
-              cards: detail.flashcards?.length ?? 0,
-              terms: detail.keyTerms?.length ?? 0,
-              segments: detail.segments?.length ?? 0,
+              cards: detail._count?.flashcards ?? detail.flashcards?.length ?? 0,
+              terms: detail._count?.keyTerms ?? detail.keyTerms?.length ?? 0,
+              segments: detail._count?.segments ?? detail.segments?.length ?? 0,
             },
           ] as const;
         } catch {
           return [
             lecture.id,
             {
-              cards: lecture.flashcards?.length ?? 0,
-              terms: lecture.keyTerms?.length ?? 0,
-              segments: lecture.segments?.length ?? 0,
+              cards: lecture._count?.flashcards ?? lecture.flashcards?.length ?? 0,
+              terms: lecture._count?.keyTerms ?? lecture.keyTerms?.length ?? 0,
+              segments: lecture._count?.segments ?? lecture.segments?.length ?? 0,
             },
           ] as const;
         }
@@ -94,7 +126,7 @@ export default function HomePage() {
         for (const [id, counts] of entries) {
           next[id] = counts;
         }
-        setLectureCounts(next);
+        setLectureCounts((prev) => ({ ...prev, ...next }));
       })
       .finally(() => {
         if (!cancelled) setCountsLoading(false);
