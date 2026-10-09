@@ -364,7 +364,7 @@ export default function HomePage() {
 
           <Link
             href="/lectures"
-            className="text-sm font-medium text-[#2563EB] dark:text-[#60A5FA] hover:underline"
+            className="text-sm font-medium text-teal-700 hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200 hover:underline"
           >
             View all lectures &rarr;
           </Link>
@@ -422,7 +422,7 @@ export default function HomePage() {
                       )}
                     </div>
 
-                    <span className="text-sm font-semibold text-[#0F172A] dark:text-white hover:text-[#2563EB] dark:hover:text-[#60A5FA] transition-colors block truncate">
+                    <span className="text-sm font-semibold text-teal-700 hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200 transition-colors block truncate">
                       {lecture.title}
                     </span>
                   </div>
