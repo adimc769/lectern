@@ -155,46 +155,6 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* Judge-Mode banner (below header) */}
-      <div className="rounded-2xl border border-teal-200 dark:border-teal-900/60 bg-teal-50/40 dark:bg-teal-950/20 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5 min-w-0">
-          <div className="p-2.5 rounded-xl bg-[#0F172A] dark:bg-white text-white dark:text-[#0F172A] shrink-0">
-            <Gavel className="w-5 h-5" />
-          </div>
-          <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-bold text-[#0F172A] dark:text-white">
-                Judge Mode — 60s demo
-              </h2>
-              <OfflineBadge source={source} compact />
-            </div>
-            <p className="text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed max-w-xl">
-              One click seeds a live lecture on the backend, then opens the full study
-              workspace: summary, transcript, flashcards, and Q&amp;A.
-            </p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleSeedDemo}
-          disabled={isSeeding}
-          className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 disabled:opacity-60 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-wait shrink-0 shadow-xs"
-        >
-          {isSeeding ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Seeding live demo…</span>
-            </>
-          ) : (
-            <>
-              <Gavel className="w-4 h-4" />
-              <span>Load live demo lecture</span>
-            </>
-          )}
-        </button>
-      </div>
-
       {/* Seed error toast (5s auto-dismiss) */}
       {seedError && (
         <div
@@ -259,6 +219,45 @@ export default function HomePage() {
             <span className="font-medium text-sm">Processed locally on your device</span>
           </div>
         </div>
+      </div>
+
+      {/* Try a sample lecture banner (below Add card) */}
+      <div className="rounded-2xl border border-teal-200 dark:border-teal-900/60 bg-teal-50/40 dark:bg-teal-950/20 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5 min-w-0">
+          <div className="p-2.5 rounded-xl bg-[#0F172A] dark:bg-white text-white dark:text-[#0F172A] shrink-0">
+            <Gavel className="w-5 h-5" />
+          </div>
+          <div className="space-y-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-bold text-[#0F172A] dark:text-white">
+                Try a sample lecture
+              </h2>
+              <OfflineBadge source={source} compact />
+            </div>
+            <p className="text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed max-w-xl">
+              One click loads a short real lecture so you can explore the full workspace.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSeedDemo}
+          disabled={isSeeding}
+          className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 disabled:opacity-60 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:cursor-wait shrink-0 shadow-xs"
+        >
+          {isSeeding ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Seeding live demo…</span>
+            </>
+          ) : (
+            <>
+              <Gavel className="w-4 h-4" />
+              <span>Load live demo lecture</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Continue Studying Section (if lectures exist) */}
