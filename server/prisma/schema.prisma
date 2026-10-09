@@ -83,6 +83,7 @@ model Document {
 
   pages     DocumentPage[]
   chunks    DocumentChunk[]
+  exams     Exam[]
 }
 
 model DocumentPage {
@@ -108,4 +109,37 @@ model DocumentChunk {
   document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
+}
+
+model Exam {
+  id          String   @id @default(uuid())
+  documentId  String
+  status      String   @default("PROCESSING") // PROCESSING, COMPLETED, FAILED
+  total       Int      @default(0)
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  questions   ExamQuestion[]
+
+  @@index([documentId])
+}
+
+model ExamQuestion {
+  id             String   @id @default(uuid())
+  examId         String
+  qtype          String   // mcq, tf, identification
+  question       String
+  choicesJson    String   @default("[]") // Serialized JSON array of 4 choice strings (mcq only)
+  answerIndex    Int?
+  answer         String?
+  acceptableJson String   @default("[]") // Serialized JSON array of acceptable answers (identification)
+  explanation    String   @default("")
+  pageNo         Int?
+  section        String?
+
+  exam           Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@index([examId])
 }

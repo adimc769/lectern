@@ -5,6 +5,7 @@ import { CONFIG } from './config.js';
 import { statusRouter } from './routes/statusRoutes.js';
 import { lectureRouter } from './routes/lectureRoutes.js';
 import { documentRouter } from './routes/documentRoutes.js';
+import { examRouter } from './routes/examRoutes.js';
 import { qnaRouter } from './routes/qnaRoutes.js';
 
 const app = express();
@@ -26,6 +27,7 @@ app.use('/uploads', express.static(CONFIG.UPLOADS_DIR));
 app.use('/api/status', statusRouter);
 app.use('/api/lectures', lectureRouter);
 app.use('/api/documents', documentRouter);
+app.use('/api/documents/:id', examRouter);
 app.use('/api/qna', qnaRouter);
 
 // Root health check

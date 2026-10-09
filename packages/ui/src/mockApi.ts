@@ -319,12 +319,33 @@ export interface MockApiOptions {
 }
 
 /**
+ * Local exam fixture shapes for the Phase 2 exam player.
+ * Legacy mcq fixtures carry no qtype; new tf/identification fixtures carry
+ * qtype so QuizPlayer can branch. Kept local to avoid widening shared types.
+ */
+export type ExamFixtureType = 'mcq' | 'tf' | 'identification';
+
+export interface ExamFixture {
+  id: string;
+  qtype: ExamFixtureType;
+  question: string;
+  choices?: [string, string, string, string];
+  answerIndex?: number;
+  answer?: string;
+  acceptableAnswers?: string[];
+  explanation: string;
+  sourceStart: number;
+}
+
+type AnyQuizQuestion = QuizQuestion | ExamFixture;
+
+/**
  * Demo-mode quiz fixtures: two preloaded lectures ship with flashcards AND
  * quizzes. Every question is answerable from the transcript only, carries 4
  * distinct choices with exactly one correct answer, a one-line explanation,
  * and the sourceStart of the chunk it came from.
  */
-const QUIZZES: Record<string, QuizQuestion[]> = {
+const QUIZZES: Record<string, AnyQuizQuestion[]> = {
   'lec-1': [
     {
       id: 'lec-1-q1',
@@ -368,6 +389,28 @@ const QUIZZES: Record<string, QuizQuestion[]> = {
       explanation: 'Raft safety guarantees committed entries survive every future election.',
       sourceStart: 751,
     },
+    {
+      id: 'lec-1-q5',
+      qtype: 'tf',
+      question: 'In Raft, any two quorums overlap by at least one node, which prevents split brain.',
+      answer: 'True',
+      explanation: 'Two majorities of 3 out of 5 always intersect, so two leaders cannot win the same term.',
+      sourceStart: 631,
+    },
+    {
+      id: 'lec-1-q6',
+      qtype: 'identification',
+      question: 'Name the three states a Raft node can be in.',
+      answer: 'Follower, Candidate, Leader',
+      acceptableAnswers: [
+        'Follower, Candidate, Leader',
+        'Follower Candidate Leader',
+        'follower, candidate, leader',
+        'Follower / Candidate / Leader',
+      ],
+      explanation: 'Every Raft node starts as a Follower and moves to Candidate or Leader during elections.',
+      sourceStart: 321,
+    },
   ],
   'lec-2': [
     {
@@ -408,6 +451,28 @@ const QUIZZES: Record<string, QuizQuestion[]> = {
       answerIndex: 0,
       explanation: 'Attention ignores token order, so position vectors restore sequence order.',
       sourceStart: 541,
+    },
+    {
+      id: 'lec-2-q4',
+      qtype: 'tf',
+      question: 'Dividing attention scores by the square root of d_k keeps softmax out of vanishing-gradient regions.',
+      answer: 'True',
+      explanation: 'Large dot products saturate softmax, so scaling by 1 / sqrt(d_k) keeps gradients healthy.',
+      sourceStart: 396,
+    },
+    {
+      id: 'lec-2-q5',
+      qtype: 'identification',
+      question: 'What do Q, K, and V stand for in scaled dot-product attention?',
+      answer: 'Query, Key, Value',
+      acceptableAnswers: [
+        'Query, Key, Value',
+        'Query Key Value',
+        'query, key, value',
+        'Q = Query, K = Key, V = Value',
+      ],
+      explanation: 'Each token is projected into Query, Key, and Value vectors before attention weights are computed.',
+      sourceStart: 166,
     },
   ],
 };
@@ -631,7 +696,9 @@ export class MockLecternApi implements LecternApiClient {
 
   /**
    * GET /lectures/:id/quiz -> [{id,question,choices,answerIndex,explanation,sourceStart}]
-   * Validates shape (4 distinct choices, valid answerIndex) before returning.
+   * Validates shape before returning. Accepts legacy mcq (no qtype), exam mcq
+   * (qtype mcq), tf (qtype tf + True/False answer), and identification
+   * (qtype identification + answer + acceptableAnswers).
    */
   async getQuiz(id: string): Promise<QuizQuestion[]> {
     await delay(200);
@@ -640,17 +707,73 @@ export class MockLecternApi implements LecternApiClient {
       return [];
     }
     for (const q of quiz) {
-      if (
-        !Array.isArray(q.choices) ||
-        q.choices.length !== 4 ||
-        new Set(q.choices).size !== 4 ||
-        q.answerIndex < 0 ||
-        q.answerIndex > 3
-      ) {
-        throw new Error(`Invalid quiz fixture for lecture "${id}" (question "${q.id}").`);
+      const maybeExam = q as Partial<ExamFixture>;
+      if (maybeExam.qtype === undefined) {
+        const legacy = q as QuizQuestion;
+        if (
+          !Array.isArray(legacy.choices) ||
+          legacy.choices.length !== 4 ||
+          new Set(legacy.choices).size !== 4 ||
+          legacy.answerIndex < 0 ||
+          legacy.answerIndex > 3
+        ) {
+          throw new Error(`Invalid quiz fixture for lecture "${id}" (question "${q.id}").`);
+        }
+        continue;
       }
+      if (maybeExam.qtype === 'mcq') {
+        if (
+          !Array.isArray(maybeExam.choices) ||
+          maybeExam.choices.length !== 4 ||
+          new Set(maybeExam.choices).size !== 4 ||
+          typeof maybeExam.answerIndex !== 'number' ||
+          maybeExam.answerIndex < 0 ||
+          maybeExam.answerIndex > 3
+        ) {
+          throw new Error(`Invalid exam mcq fixture for lecture "${id}" (question "${q.id}").`);
+        }
+        continue;
+      }
+      if (maybeExam.qtype === 'tf') {
+        const normalized = typeof maybeExam.answer === 'string' ? maybeExam.answer.trim().toLowerCase() : '';
+        if (normalized !== 'true' && normalized !== 'false') {
+          throw new Error(`Invalid exam tf fixture for lecture "${id}" (question "${q.id}").`);
+        }
+        if (typeof maybeExam.question !== 'string' || maybeExam.question.trim().length === 0) {
+          throw new Error(`Invalid exam tf fixture for lecture "${id}" (question "${q.id}").`);
+        }
+        if (typeof maybeExam.explanation !== 'string' || typeof maybeExam.sourceStart !== 'number') {
+          throw new Error(`Invalid exam tf fixture for lecture "${id}" (question "${q.id}").`);
+        }
+        continue;
+      }
+      if (maybeExam.qtype === 'identification') {
+        if (typeof maybeExam.question !== 'string' || maybeExam.question.trim().length === 0) {
+          throw new Error(`Invalid exam identification fixture for lecture "${id}" (question "${q.id}").`);
+        }
+        if (typeof maybeExam.answer !== 'string' || maybeExam.answer.trim().length === 0) {
+          throw new Error(`Invalid exam identification fixture for lecture "${id}" (question "${q.id}").`);
+        }
+        if (
+          maybeExam.acceptableAnswers !== undefined &&
+          (!Array.isArray(maybeExam.acceptableAnswers) || maybeExam.acceptableAnswers.length === 0)
+        ) {
+          throw new Error(`Invalid exam identification fixture for lecture "${id}" (question "${q.id}").`);
+        }
+        if (typeof maybeExam.explanation !== 'string' || typeof maybeExam.sourceStart !== 'number') {
+          throw new Error(`Invalid exam identification fixture for lecture "${id}" (question "${q.id}").`);
+        }
+        continue;
+      }
+      throw new Error(`Invalid quiz fixture for lecture "${id}" (question "${q.id}").`);
     }
-    return quiz.map((q) => ({ ...q, choices: [...q.choices] as QuizQuestion['choices'] }));
+    return quiz.map((q) => {
+      const copy = { ...(q as unknown as Record<string, unknown>) };
+      if (Array.isArray((copy as { choices?: unknown }).choices)) {
+        (copy as { choices: string[] }).choices = [...(copy as { choices: string[] }).choices];
+      }
+      return copy as unknown as QuizQuestion;
+    });
   }
 
   /**

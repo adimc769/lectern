@@ -10,6 +10,45 @@ import { BackendUnreachableError, notifyBackendFallback } from './api';
 /** Shared document contracts, re-exported beside the fetch helpers. */
 export type { DocumentDTO, DocumentPageDTO, DocumentStatus, DocumentType };
 
+/**
+ * LOCAL mirrors of the Phase 2 exam backend contract (built in parallel).
+ * Defined here — not in @lectern/shared — so the web tier degrades
+ * gracefully when the endpoints/DTOs are still missing. Keep in sync with:
+ * POST /api/documents/:id/exams, GET list, GET detail, GET /quiz.
+ */
+export type ExamQuestionType = 'mcq' | 'tf' | 'identification';
+
+export interface ExamQuestionDTO {
+  id: string;
+  qtype: ExamQuestionType;
+  question: string;
+  choices?: [string, string, string, string];
+  answerIndex?: number;
+  answer?: string;
+  acceptableAnswers?: string[];
+  explanation: string;
+  pageNo?: number | null;
+  section?: string | null;
+}
+
+export type ExamStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | string;
+
+export interface ExamDTO {
+  id: string;
+  status: ExamStatus;
+  questions?: ExamQuestionDTO[];
+}
+
+/** mcq-only compat shape from GET /api/documents/:id/quiz. */
+export interface DocQuizQuestion {
+  id: string;
+  question: string;
+  choices: [string, string, string, string];
+  answerIndex: number;
+  explanation: string;
+  sourceStart: number;
+}
+
 async function readErrorMessage(res: Response, fallback: string): Promise<string> {
   try {
     const data: unknown = await res.json();
@@ -197,4 +236,154 @@ export async function fetchDocumentProgress(id: string): Promise<JobProgressDTO>
     // fall through to the shape error below
   }
   throw new Error('Document progress returned an unexpected response shape (missing { stage })');
+}
+
+/**
+ * Lists generated exams for a document (no question bodies).
+ * Throws BackendUnreachableError on transport failure, never fake data.
+ */
+export async function getExams(docId: string): Promise<ExamDTO[]> {
+  if (!docId || docId.trim().length === 0) {
+    throw new Error('Document id is required.');
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`/api/documents/${encodeURIComponent(docId)}/exams`, { cache: 'no-store' });
+  } catch {
+    notifyBackendFallback('Document exam service unreachable — could not load exams');
+    throw new BackendUnreachableError(
+      `/api/documents/${docId}/exams`,
+      'Document exam service unreachable — could not load exams.'
+    );
+  }
+
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, 'Could not load exams for this document'));
+  }
+
+  try {
+    const data: unknown = await res.json();
+    if (Array.isArray(data)) return data as ExamDTO[];
+  } catch {
+    // fall through to the shape error below
+  }
+  throw new Error('Exams returned an unexpected response shape (expected an array)');
+}
+
+/**
+ * Fetches one exam WITH its questions.
+ * Throws BackendUnreachableError on transport failure, never fake data.
+ */
+export async function getExam(docId: string, examId: string): Promise<ExamDTO> {
+  if (!docId || docId.trim().length === 0) {
+    throw new Error('Document id is required.');
+  }
+  if (!examId || examId.trim().length === 0) {
+    throw new Error('Exam id is required.');
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`/api/documents/${encodeURIComponent(docId)}/exams/${encodeURIComponent(examId)}`, {
+      cache: 'no-store',
+    });
+  } catch {
+    notifyBackendFallback('Document exam service unreachable — could not load this exam');
+    throw new BackendUnreachableError(
+      `/api/documents/${docId}/exams/${examId}`,
+      'Document exam service unreachable — could not load this exam.'
+    );
+  }
+
+  if (res.status === 404) {
+    throw new Error(`Exam with id "${examId}" not found.`);
+  }
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, 'Could not load this exam'));
+  }
+
+  try {
+    const data: unknown = await res.json();
+    if (data && typeof data === 'object' && typeof (data as { id?: unknown }).id === 'string') {
+      return data as ExamDTO;
+    }
+  } catch {
+    // fall through to the shape error below
+  }
+  throw new Error('Exam returned an unexpected response shape (missing { id })');
+}
+
+/**
+ * Starts exam generation for a document.
+ * Resolves with the new { id, status }; throws explicit errors, never fake data.
+ */
+export async function generateExam(docId: string, count = 8): Promise<{ id: string; status: string }> {
+  if (!docId || docId.trim().length === 0) {
+    throw new Error('Document id is required.');
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`/api/documents/${encodeURIComponent(docId)}/exams`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ count }),
+    });
+  } catch {
+    notifyBackendFallback('Document exam service unreachable — exam was not started');
+    throw new BackendUnreachableError(
+      `/api/documents/${docId}/exams`,
+      'Document exam service unreachable — exam was not started. Check that the backend is running and try again.'
+    );
+  }
+
+  if (res.status === 201 || res.status === 200) {
+    try {
+      const data: unknown = await res.json();
+      if (data && typeof data === 'object' && typeof (data as { id?: unknown }).id === 'string') {
+        const { id, status } = data as { id: string; status: string };
+        return { id, status };
+      }
+    } catch {
+      // fall through to the shape error below
+    }
+    throw new Error('Exam generation returned an unexpected response shape (missing { id })');
+  }
+
+  throw new Error(await readErrorMessage(res, 'Exam generation failed'));
+}
+
+/**
+ * Fetches the mcq-only compat quiz for a document.
+ * Returns [] when the backend has no quiz yet; throws BackendUnreachableError
+ * on transport failure so callers can fall back honestly.
+ */
+export async function getDocQuiz(docId: string): Promise<DocQuizQuestion[]> {
+  if (!docId || docId.trim().length === 0) {
+    throw new Error('Document id is required.');
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`/api/documents/${encodeURIComponent(docId)}/quiz`, { cache: 'no-store' });
+  } catch {
+    throw new BackendUnreachableError(
+      `/api/documents/${docId}/quiz`,
+      'Document quiz unreachable — could not load quiz.'
+    );
+  }
+
+  if (res.status === 404) return [];
+  if (!res.ok) {
+    throw new Error(await readErrorMessage(res, 'Could not load quiz for this document'));
+  }
+
+  try {
+    const data: unknown = await res.json();
+    if (Array.isArray(data)) return data as DocQuizQuestion[];
+  } catch {
+    // fall through to the shape error below
+  }
+  throw new Error('Document quiz returned an unexpected response shape (expected an array)');
 }

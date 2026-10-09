@@ -117,3 +117,6 @@ export type DocumentType = 'PDF' | 'DOCX' | 'TXT';
 export type DocumentStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 export interface DocumentPageDTO { pageNo: number; text: string; sections: string[]; }
 export interface DocumentDTO { id: string; title: string; docType: DocumentType; status: DocumentStatus; filePath: string; pageCount: number; createdAt: string; updatedAt: string; error?: string; pages?: DocumentPageDTO[]; }
+export type ExamQuestionType = 'mcq' | 'tf' | 'identification';
+export interface ExamQuestionDTO { id: string; qtype: ExamQuestionType; question: string; choices?: [string, string, string, string]; answerIndex?: number; answer?: string; acceptableAnswers?: string[]; explanation: string; pageNo?: number | null; section?: string | null; }
+export interface ExamDTO { id: string; documentId: string; status: 'PROCESSING' | 'COMPLETED' | 'FAILED'; total: number; createdAt: string; updatedAt: string; questions?: ExamQuestionDTO[]; }
