@@ -3,8 +3,8 @@ import './globals.css';
 import { OfflineBadge } from '../components/OfflineBadge';
 
 export const metadata: Metadata = {
-  title: 'Lectern — Offline Lecture Assistant',
-  description: 'Local GPU-powered transcription, summarization, flashcards, and cited Q&A.',
+  title: 'Lectern — Offline Lecture Workstation',
+  description: 'Local GPU-accelerated lecture transcription, summarization, flashcards, and cited cross-lecture Q&A.',
 };
 
 export default function RootLayout({
@@ -14,33 +14,36 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-        {/* Top Navigation & Offline Hardware Banner */}
-        <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <body className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-zinc-800 selection:text-zinc-100 antialiased">
+        {/* Top Header */}
+        <header className="border-b border-zinc-850 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+            {/* Brand Logo & Workstation Indicator */}
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-600/30">
+              <div className="w-7 h-7 rounded-md bg-zinc-900 border border-zinc-750 flex items-center justify-center font-mono font-bold text-xs text-zinc-200">
                 L
               </div>
-              <div>
-                <span className="font-bold text-lg tracking-tight text-white">Lectern</span>
-                <span className="ml-2 text-xs text-indigo-400 font-mono font-medium">v0.1.0</span>
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-sm tracking-tight text-zinc-100">Lectern</span>
+                <span className="text-[11px] font-mono text-zinc-500 border-l border-zinc-800 pl-2">
+                  offline workstation
+                </span>
               </div>
             </div>
 
-            {/* Prominent Offline & Local GPU Badges */}
+            {/* Offline Hardware Status */}
             <OfflineBadge />
           </div>
         </header>
 
-        {/* Main Content Area */}
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Workspace Area */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {children}
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-500">
-          <p>Lectern &bull; 100% Local Inference &bull; Whisper.cpp (CUDA) + Ollama &bull; Built for Local AI Hackathon</p>
+        {/* Minimal Footer */}
+        <footer className="border-t border-zinc-900 py-4 text-center text-[11px] font-mono text-zinc-600">
+          <p>Local Runtime: Whisper.cpp (CUDA) · Ollama (qwen2.5) · SQLite Vector · Zero Network Egress</p>
         </footer>
       </body>
     </html>

@@ -5,7 +5,6 @@ import {
   Upload,
   Mic,
   BookOpen,
-  Sparkles,
   Search,
   Clock,
   Calendar,
@@ -15,15 +14,14 @@ import {
   RefreshCw,
   Plus,
   X,
-  MessageSquare,
-  Cpu,
-  Layers,
   ArrowRight,
+  SlidersHorizontal,
 } from 'lucide-react';
 import type { LectureDTO } from '@lectern/shared';
 import { fetchLectures } from '../lib/api';
 import { LectureViewer } from '../components/LectureViewer';
-import { UploadPanel } from '../components/UploadPanel';
+import { AudioRecorder } from '../components/AudioRecorder';
+import { AudioUploader } from '../components/AudioUploader';
 import { QnAChat } from '../components/QnAChat';
 
 export default function Home() {
@@ -32,7 +30,7 @@ export default function Home() {
   const [selectedLectureId, setSelectedLectureId] = useState<string | null>(null);
   const [targetTimestamp, setTargetTimestamp] = useState<number | undefined>(undefined);
   const [initialLectureTab, setInitialLectureTab] = useState<'summary' | 'keyTerms' | 'flashcards' | 'transcript'>('summary');
-  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [activeIntakeMode, setActiveIntakeMode] = useState<'none' | 'upload' | 'record'>('none');
   const [searchQuery, setSearchQuery] = useState('');
 
   const loadLectures = useCallback(async () => {
@@ -41,7 +39,7 @@ export default function Home() {
       const data = await fetchLectures();
       setLectures(data);
     } catch {
-      // Handled by api fallback
+      // Handled by API fallback
     } finally {
       setIsLoading(false);
     }
@@ -53,9 +51,9 @@ export default function Home() {
 
   const selectedLecture = lectures.find((l) => l.id === selectedLectureId);
 
-  const handleUploadComplete = async (newLectureId: string) => {
+  const handleIntakeComplete = async (newLectureId: string) => {
     await loadLectures();
-    setIsUploadOpen(false);
+    setActiveIntakeMode('none');
     setSelectedLectureId(newLectureId);
     setInitialLectureTab('summary');
   };
@@ -80,7 +78,7 @@ export default function Home() {
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const formatDate = (isoString?: string) => {
@@ -95,7 +93,6 @@ export default function Home() {
     }
   };
 
-  // Filter lectures
   const filteredLectures = lectures.filter((l) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -105,7 +102,7 @@ export default function Home() {
     );
   });
 
-  // If a specific lecture is selected, show detail view
+  // Detailed view for a single lecture
   if (selectedLecture) {
     return (
       <LectureViewer
@@ -121,214 +118,189 @@ export default function Home() {
   }
 
   return (
-    <div className="space-y-10">
-      {/* Hero Banner */}
-      <div className="rounded-3xl border border-slate-800/80 bg-gradient-to-b from-slate-900/90 via-slate-900/60 to-slate-950 p-6 sm:p-10 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="max-w-3xl space-y-4">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-950/70 border border-indigo-700/50 text-xs font-semibold text-indigo-300">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Air-Gapped Local Intelligence Active</span>
+    <div className="space-y-6">
+      {/* Workspace Control Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-zinc-850">
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">Lecture Library</h1>
+          <span className="px-2 py-0.5 rounded text-xs font-mono bg-zinc-900 border border-zinc-800 text-zinc-400">
+            {lectures.length} files
+          </span>
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex items-center gap-2.5">
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search lectures..."
+              aria-label="Filter lecture library"
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-md pl-8 pr-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
+            />
           </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
-            Private, offline lecture comprehension on your GPU.
-          </h1>
+          <button
+            type="button"
+            onClick={() => setActiveIntakeMode(activeIntakeMode === 'record' ? 'none' : 'record')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              activeIntakeMode === 'record'
+                ? 'bg-rose-950/50 text-rose-300 border-rose-800'
+                : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:bg-zinc-850 hover:text-white'
+            }`}
+          >
+            <Mic className="w-3.5 h-3.5 text-rose-400" />
+            <span>Record</span>
+          </button>
 
-          <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-            Record classroom audio or upload recordings to generate synchronized Whisper transcripts, 
-            executive topic summaries, 3D flip flashcards, and cross-lecture cited Q&A—completely off the grid.
-          </p>
-
-          {/* Quick Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setIsUploadOpen(true)}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <Upload className="w-4 h-4" />
-              <span>Process New Lecture</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsUploadOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-850 text-slate-200 border border-slate-800 text-sm font-medium transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <Mic className="w-4 h-4 text-rose-400" />
-              <span>Record Live Microphone</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveIntakeMode(activeIntakeMode === 'upload' ? 'none' : 'upload')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              activeIntakeMode === 'upload'
+                ? 'bg-indigo-950/50 text-indigo-300 border-indigo-800'
+                : 'bg-zinc-100 text-zinc-950 border-zinc-200 hover:bg-white font-semibold'
+            }`}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Upload</span>
+          </button>
         </div>
       </div>
 
-      {/* Upload Modal / Collapsible Drawer */}
-      {isUploadOpen && (
-        <div className="relative animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <span className="text-xs uppercase tracking-wider font-bold text-indigo-400">
-              Offline Intake Pipeline
+      {/* Collapsible Intake Panels (Clean & Focused) */}
+      {activeIntakeMode !== 'none' && (
+        <div className="relative border border-zinc-800 rounded-lg bg-zinc-900/40 p-1">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-850">
+            <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+              {activeIntakeMode === 'record' ? 'Microphone Intake' : 'File Intake'}
             </span>
             <button
               type="button"
-              onClick={() => setIsUploadOpen(false)}
-              className="p-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+              onClick={() => setActiveIntakeMode('none')}
+              className="text-zinc-500 hover:text-zinc-300 p-1 transition-colors"
+              aria-label="Close intake panel"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          <UploadPanel onUploadComplete={handleUploadComplete} />
+
+          <div className="p-4">
+            {activeIntakeMode === 'record' && (
+              <AudioRecorder onUploadSuccess={handleIntakeComplete} />
+            )}
+            {activeIntakeMode === 'upload' && (
+              <AudioUploader onUploadSuccess={handleIntakeComplete} />
+            )}
+          </div>
         </div>
       )}
 
-      {/* Main Grid: Library (2 Cols) + Cross-Lecture Q&A (1 Col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Lecture Library (8 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <BookOpen className="w-5 h-5 text-indigo-400" />
-              <h2 className="text-xl font-bold text-white">Your Course Library</h2>
-              <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-slate-900 border border-slate-800 text-slate-400">
-                {lectures.length} Total
-              </span>
-            </div>
-
-            {/* Filter Input */}
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search lectures..."
-                aria-label="Search lectures"
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-              />
-            </div>
-          </div>
-
-          {/* Loading State */}
+      {/* Main Workspace Layout: Library (8 Cols) + Q&A Assistant (4 Cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Lectures List (7 cols) */}
+        <div className="lg:col-span-7 space-y-3">
           {isLoading ? (
-            <div className="p-12 text-center rounded-2xl border border-slate-800 bg-slate-900/40">
-              <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-3" />
-              <p className="text-sm font-medium text-slate-300">Loading lecture library...</p>
+            <div className="p-12 text-center rounded-lg border border-zinc-850 bg-zinc-900/20 text-zinc-400 font-mono text-xs">
+              <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-zinc-500" />
+              Loading course library...
             </div>
           ) : filteredLectures.length === 0 ? (
-            /* Empty State */
-            <div className="rounded-2xl border border-dashed border-slate-800 p-12 text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center mx-auto text-slate-600">
-                <BookOpen className="w-7 h-7" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-white">No lectures found</h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  {searchQuery
-                    ? 'No lectures match your search terms.'
-                    : 'Process an audio file or record a live class to start studying with local offline AI.'}
-                </p>
-              </div>
+            <div className="rounded-lg border border-dashed border-zinc-800 p-12 text-center space-y-3">
+              <p className="text-xs font-mono text-zinc-400">No lectures found.</p>
               <button
                 type="button"
-                onClick={() => setIsUploadOpen(true)}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-all inline-flex items-center gap-1.5"
+                onClick={() => setActiveIntakeMode('upload')}
+                className="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 text-xs font-mono transition-colors"
               >
-                <Plus className="w-4 h-4" />
-                <span>Upload First Lecture</span>
+                + Ingest Audio File
               </button>
             </div>
           ) : (
-            /* Lecture Cards List */
-            <div className="space-y-4">
-              {filteredLectures.map((lecture) => (
-                <div
-                  key={lecture.id}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/40 hover:border-slate-700/80 hover:bg-slate-900/70 p-6 shadow-lg transition-all space-y-4 group"
-                >
-                  {/* Card Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
-                          {lecture.status}
-                        </span>
-                        <span className="text-slate-400 flex items-center gap-1 font-mono">
-                          <Clock className="w-3.5 h-3.5 text-slate-500" />
-                          <span>{formatDuration(lecture.duration || 0)}</span>
-                        </span>
-                        <span className="text-slate-600">&bull;</span>
-                        <span className="text-slate-400 flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                          <span>{formatDate(lecture.createdAt)}</span>
-                        </span>
-                      </div>
-
-                      <h3
-                        onClick={() => handleOpenLectureTab(lecture.id, 'summary')}
-                        className="text-lg font-bold text-white group-hover:text-indigo-300 transition-colors cursor-pointer"
-                      >
-                        {lecture.title}
-                      </h3>
+            filteredLectures.map((lecture) => (
+              <div
+                key={lecture.id}
+                className="rounded-lg border border-zinc-850 bg-zinc-900/40 hover:border-zinc-750 hover:bg-zinc-900/70 p-4 transition-colors space-y-3"
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500">
+                      <span className="text-zinc-400">{formatDuration(lecture.duration || 0)}</span>
+                      <span>&bull;</span>
+                      <span>{formatDate(lecture.createdAt)}</span>
+                      <span>&bull;</span>
+                      <span className="text-emerald-400/90 font-medium">indexed</span>
                     </div>
 
-                    <button
-                      type="button"
+                    <h2
                       onClick={() => handleOpenLectureTab(lecture.id, 'summary')}
-                      className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white text-xs font-semibold transition-all shrink-0 self-start sm:self-auto flex items-center gap-1"
+                      className="text-sm font-semibold text-zinc-100 hover:text-white cursor-pointer transition-colors leading-snug"
                     >
-                      <span>Study</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                      {lecture.title}
+                    </h2>
                   </div>
 
-                  {/* Summary Snippet */}
-                  {lecture.summary && (
-                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-                      {lecture.summary}
-                    </p>
-                  )}
-
-                  {/* Card Quick Tab Buttons */}
-                  <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenLectureTab(lecture.id, 'transcript')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-850 text-slate-300 hover:text-cyan-300 border border-slate-800 transition-colors"
-                    >
-                      <FileAudio className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Transcript ({lecture.segments?.length || 0})</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleOpenLectureTab(lecture.id, 'flashcards')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-850 text-slate-300 hover:text-emerald-300 border border-slate-800 transition-colors"
-                    >
-                      <CreditCard className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Flashcards ({lecture.flashcards?.length || 0})</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleOpenLectureTab(lecture.id, 'keyTerms')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-850 text-slate-300 hover:text-indigo-300 border border-slate-800 transition-colors"
-                    >
-                      <Bookmark className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>Key Terms ({lecture.keyTerms?.length || 0})</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenLectureTab(lecture.id, 'summary')}
+                    className="px-2.5 py-1 rounded text-xs font-medium text-zinc-300 hover:text-white bg-zinc-850 hover:bg-zinc-800 border border-zinc-750 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Open</span>
+                    <ArrowRight className="w-3 h-3 text-zinc-400" />
+                  </button>
                 </div>
-              ))}
-            </div>
+
+                {/* Summary Excerpt */}
+                {lecture.summary && (
+                  <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                    {lecture.summary}
+                  </p>
+                )}
+
+                {/* Sub-tools bar */}
+                <div className="pt-2 border-t border-zinc-850/80 flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenLectureTab(lecture.id, 'transcript')}
+                    className="hover:text-zinc-200 transition-colors flex items-center gap-1"
+                  >
+                    <FileAudio className="w-3 h-3 text-zinc-500" />
+                    <span>Transcript ({lecture.segments?.length || 0})</span>
+                  </button>
+
+                  <span className="text-zinc-600">&bull;</span>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenLectureTab(lecture.id, 'flashcards')}
+                    className="hover:text-zinc-200 transition-colors flex items-center gap-1"
+                  >
+                    <CreditCard className="w-3 h-3 text-zinc-500" />
+                    <span>Cards ({lecture.flashcards?.length || 0})</span>
+                  </button>
+
+                  <span className="text-zinc-600">&bull;</span>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenLectureTab(lecture.id, 'keyTerms')}
+                    className="hover:text-zinc-200 transition-colors flex items-center gap-1"
+                  >
+                    <Bookmark className="w-3 h-3 text-zinc-500" />
+                    <span>Terms ({lecture.keyTerms?.length || 0})</span>
+                  </button>
+                </div>
+              </div>
+            ))
           )}
         </div>
 
-        {/* Right Column: Cross-Lecture Q&A Assistant (5 cols) */}
-        <div className="lg:col-span-5 sticky top-24">
-          <div className="space-y-4">
-            <QnAChat onCitationClick={handleCitationClick} />
-          </div>
+        {/* Right Column: Grounded Q&A Assistant (5 cols) */}
+        <div className="lg:col-span-5 sticky top-20">
+          <QnAChat onCitationClick={handleCitationClick} />
         </div>
       </div>
     </div>

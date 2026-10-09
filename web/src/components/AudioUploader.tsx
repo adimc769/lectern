@@ -5,7 +5,6 @@ import {
   Upload,
   FileAudio,
   X,
-  Sparkles,
   AlertCircle,
   CheckCircle2,
   Cpu,
@@ -19,16 +18,16 @@ type Props = {
   className?: string;
 };
 
-const STAGE_DESCRIPTIONS: Record<PipelineStage, string> = {
-  IDLE: 'Ready for upload',
-  CONVERTING_AUDIO: 'Converting audio to 16kHz WAV with FFmpeg...',
-  TRANSCRIBING: 'Transcribing speech on GPU with Whisper.cpp (CUDA)...',
-  CHUNKING: 'Segmenting acoustic chunks and aligning timestamps...',
-  GENERATING_EMBEDDINGS: 'Generating vector embeddings locally (nomic-embed-text)...',
-  SUMMARIZING: 'Synthesizing lecture summary via Ollama (qwen2.5:14b)...',
-  EXTRACTING_CARDS: 'Extracting key terms and study flashcards...',
-  COMPLETED: 'Lecture processing complete!',
-  FAILED: 'Processing failed',
+const STAGE_LABELS: Record<PipelineStage, string> = {
+  IDLE: 'Standby',
+  CONVERTING_AUDIO: 'Audio normalization (16kHz WAV mono via FFmpeg)',
+  TRANSCRIBING: 'Whisper.cpp transcription (CUDA fp16)',
+  CHUNKING: 'Acoustic sentence chunking & alignment',
+  GENERATING_EMBEDDINGS: 'SQLite vector embedding (nomic-embed-text)',
+  SUMMARIZING: 'Topic synthesis (Ollama qwen2.5:14b)',
+  EXTRACTING_CARDS: 'Flashcard & key term extraction',
+  COMPLETED: 'Pipeline execution complete',
+  FAILED: 'Execution failed',
 };
 
 export function AudioUploader({ onUploadSuccess, className = '' }: Props) {
@@ -75,7 +74,7 @@ export function AudioUploader({ onUploadSuccess, className = '' }: Props) {
         }
         setErrorMessage(null);
       } else {
-        setErrorMessage('Please select a valid audio file (MP3, WAV, M4A, WebM, OGG, FLAC).');
+        setErrorMessage('Unsupported format. Please select an audio file (WAV, MP3, M4A, FLAC, WebM).');
       }
     }
   };
@@ -100,7 +99,7 @@ export function AudioUploader({ onUploadSuccess, className = '' }: Props) {
       lectureId: '',
       stage: 'CONVERTING_AUDIO',
       progressPercent: 15,
-      message: 'Initializing local audio conversion...',
+      message: 'Converting audio stream...',
     });
 
     try {
@@ -155,145 +154,116 @@ export function AudioUploader({ onUploadSuccess, className = '' }: Props) {
   return (
     <div
       role="region"
-      aria-label="Lecture Audio Uploader"
-      className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8 shadow-xl backdrop-blur-sm space-y-6 ${className}`}
+      aria-label="Audio File Uploader"
+      className={`rounded-lg border border-zinc-800 bg-zinc-900/60 p-5 space-y-4 ${className}`}
     >
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-indigo-950/80 border border-indigo-700/60 flex items-center justify-center text-indigo-400">
-            <Upload className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-white">Upload Audio Recording</h3>
-            <p className="text-xs text-slate-400">
-              Drag and drop lecture audio files for offline GPU transcription.
-            </p>
-          </div>
+      <div className="flex items-center justify-between pb-3 border-b border-zinc-850">
+        <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
+          <Upload className="w-3.5 h-3.5 text-zinc-400" />
+          <span>AUDIO FILE INTAKE</span>
         </div>
-
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-400">
-          <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Local Whisper CUDA</span>
-        </div>
+        <span className="text-[11px] font-mono text-zinc-500">
+          Max: 2 GB &bull; Local FFmpeg + CUDA
+        </span>
       </div>
 
-      {/* Uploading & Pipeline Progress State */}
+      {/* Uploading Progress */}
       {isUploading && progress && (
         <div
           role="region"
           aria-live="polite"
-          aria-label="Upload and transcription progress"
-          className="space-y-6 py-4"
+          className="py-3 space-y-3 font-mono"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-950 border border-indigo-700/60 flex items-center justify-center text-indigo-400 animate-spin">
-                <RefreshCw className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-[11px] uppercase tracking-wider font-semibold text-indigo-400">
-                  Stage: {progress.stage}
-                </span>
-                <h4 className="text-sm font-bold text-white">
-                  {STAGE_DESCRIPTIONS[progress.stage] || progress.message}
-                </h4>
-              </div>
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 text-zinc-300">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-zinc-400" />
+              <span>{STAGE_LABELS[progress.stage] || progress.message}</span>
             </div>
-            <span className="text-2xl font-black font-mono text-indigo-400">
+            <span className="font-semibold text-zinc-200">
               {progress.progressPercent}%
             </span>
           </div>
 
-          {/* Progress Bar */}
-          <div className="space-y-2">
+          {/* Clean Linear Progress Bar */}
+          <div
+            role="progressbar"
+            aria-valuenow={progress.progressPercent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuetext={`${progress.progressPercent}% - ${progress.stage}`}
+            className="w-full h-1.5 rounded-full bg-zinc-950 border border-zinc-850 overflow-hidden"
+          >
             <div
-              role="progressbar"
-              aria-valuenow={progress.progressPercent}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuetext={`${progress.progressPercent}% - ${progress.stage}`}
-              className="w-full h-3 rounded-full bg-slate-950 border border-slate-800 overflow-hidden p-0.5"
-            >
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-indigo-400 to-cyan-400 transition-all duration-300"
-                style={{ width: `${progress.progressPercent}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-slate-500 font-mono">
-              <span>Local Offline Pipeline</span>
-              <span>100% on-device</span>
-            </div>
+              className="h-full bg-zinc-100 transition-all duration-300"
+              style={{ width: `${progress.progressPercent}%` }}
+            />
           </div>
         </div>
       )}
 
       {/* Completed Success State */}
       {!isUploading && completedId && (
-        <div className="py-6 text-center space-y-4">
-          <div className="w-12 h-12 rounded-full bg-emerald-950/80 border border-emerald-500/50 flex items-center justify-center mx-auto text-emerald-400">
-            <CheckCircle2 className="w-7 h-7" />
+        <div className="py-4 text-center space-y-3 font-mono">
+          <div className="w-8 h-8 rounded-full bg-emerald-950 border border-emerald-800 flex items-center justify-center mx-auto text-emerald-400">
+            <CheckCircle2 className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-base font-bold text-white">Audio Processed Successfully!</h4>
-            <p className="text-xs text-slate-400 mt-1">
-              Synchronized transcript and flashcards are ready for offline study.
-            </p>
+            <p className="text-xs text-zinc-200">Ingestion complete: {completedId}</p>
           </div>
-          <div className="flex items-center justify-center gap-3 pt-2">
+          <div className="flex items-center justify-center gap-2 pt-1 font-sans">
             <button
               type="button"
               onClick={() => onUploadSuccess?.(completedId)}
-              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors"
             >
               Open Lecture &rarr;
             </button>
             <button
               type="button"
               onClick={resetForm}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-all"
+              className="px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-750 text-zinc-300 text-xs font-medium transition-colors"
             >
-              Upload Another
+              Ingest Another
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Drag & Drop Zone (when not uploading and not completed) */}
+      {/* Form & Dropzone */}
       {!isUploading && !completedId && (
-        <div className="space-y-5">
-          {/* Title Input */}
-          <div className="space-y-1.5">
-            <label htmlFor="audio-upload-title" className="block text-xs font-semibold text-slate-300">
-              Lecture Title <span className="text-slate-500 font-normal">(Optional)</span>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label htmlFor="file-title-input" className="block text-[11px] font-mono text-zinc-400">
+              Lecture Title
             </label>
             <input
-              id="audio-upload-title"
+              id="file-title-input"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Distributed Systems: Raft Consensus"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              placeholder="e.g. CS101: Lecture 4 - Consensus"
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 font-mono"
             />
           </div>
 
-          {/* Drag & Drop Target Box */}
+          {/* Minimal Clean Dropzone */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
+            className={`border border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
               isDragOver
-                ? 'border-indigo-500 bg-indigo-950/30 scale-[1.01]'
+                ? 'border-zinc-500 bg-zinc-850/50'
                 : selectedFile
-                ? 'border-emerald-500/60 bg-emerald-950/10'
-                : 'border-slate-800 hover:border-slate-700 bg-slate-950/40'
+                ? 'border-emerald-800/80 bg-emerald-950/20'
+                : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/50'
             }`}
           >
             <input
               ref={fileInputRef}
-              id="file-upload-hidden-input"
+              id="file-upload-dialog"
               type="file"
               accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg,.flac,.aac"
               className="hidden"
@@ -301,15 +271,13 @@ export function AudioUploader({ onUploadSuccess, className = '' }: Props) {
             />
 
             {selectedFile ? (
-              <div className="space-y-2">
-                <div className="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-600/50 flex items-center justify-center mx-auto text-emerald-400">
-                  <FileAudio className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white">{selectedFile.name}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB &bull; Ready to transcribe
-                  </p>
+              <div className="flex items-center justify-between font-mono text-xs text-left px-2">
+                <div className="flex items-center gap-2 truncate">
+                  <FileAudio className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="text-zinc-200 truncate">{selectedFile.name}</span>
+                  <span className="text-zinc-500">
+                    ({(selectedFile.size / (1024 * 1024)).toFixed(1)} MB)
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -317,40 +285,31 @@ export function AudioUploader({ onUploadSuccess, className = '' }: Props) {
                     e.stopPropagation();
                     setSelectedFile(null);
                   }}
-                  className="inline-flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 pt-1"
+                  className="text-zinc-500 hover:text-zinc-300 p-1"
                 >
                   <X className="w-3.5 h-3.5" />
-                  <span>Choose different file</span>
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-indigo-400">
-                  <Upload className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">
-                    Drag and drop your audio file here, or{' '}
-                    <span className="text-indigo-400 underline">browse</span>
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Supports MP3, WAV, M4A, WebM, OGG up to 2 hours
-                  </p>
-                </div>
+              <div className="space-y-1">
+                <p className="text-xs text-zinc-300">
+                  Drop audio file or <span className="text-indigo-400 underline">select file</span>
+                </p>
+                <p className="text-[11px] font-mono text-zinc-500">
+                  Supported: WAV, MP3, M4A, FLAC, WebM
+                </p>
               </div>
             )}
           </div>
 
-          {/* Upload Button */}
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-1">
             <button
               type="button"
               disabled={!selectedFile}
               onClick={handleUpload}
-              className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-600 text-white text-sm font-semibold shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-md bg-zinc-100 hover:bg-white disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-950 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Start GPU Transcription</span>
+              Start Local Ingestion
             </button>
           </div>
         </div>
@@ -360,13 +319,10 @@ export function AudioUploader({ onUploadSuccess, className = '' }: Props) {
       {errorMessage && (
         <div
           role="alert"
-          className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-700/60 text-xs text-rose-300 flex items-start gap-2.5"
+          className="p-2.5 rounded bg-rose-950/40 border border-rose-900/60 text-xs text-rose-300 flex items-center gap-2"
         >
-          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <span className="font-semibold">Notice: </span>
-            {errorMessage}
-          </div>
+          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
     </div>

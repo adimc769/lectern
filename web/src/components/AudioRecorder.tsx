@@ -1,17 +1,16 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Mic,
   Square,
   Play,
   Pause,
   RotateCcw,
-  Upload,
-  Sparkles,
-  AlertCircle,
-  CheckCircle2,
   Volume2,
+  CheckCircle2,
+  AlertCircle,
+  Radio,
 } from 'lucide-react';
 import { uploadLecture } from '../lib/api';
 
@@ -40,7 +39,6 @@ export function AudioRecorder({
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -53,7 +51,7 @@ export function AudioRecorder({
     };
   }, [previewUrl]);
 
-  const formatSeconds = (totalSec: number) => {
+  const formatTime = (totalSec: number) => {
     const mins = Math.floor(totalSec / 60);
     const secs = totalSec % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
@@ -71,14 +69,13 @@ export function AudioRecorder({
 
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Microphone audio recording is not supported in this browser environment.');
+        throw new Error('Microphone recording is unavailable in this environment.');
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
         },
       });
       audioStreamRef.current = stream;
@@ -106,11 +103,11 @@ export function AudioRecorder({
 
         if (!lectureTitle) {
           const timestampStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          setLectureTitle(`Recorded Lecture (${timestampStr})`);
+          setLectureTitle(`Lecture Recording (${timestampStr})`);
         }
       };
 
-      mediaRecorder.start(500); // 500ms chunk slice
+      mediaRecorder.start(500);
       setIsRecording(true);
       setIsPaused(false);
 
@@ -119,7 +116,7 @@ export function AudioRecorder({
       }, 1000);
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      setErrorMessage(`Microphone access error: ${errorMsg}`);
+      setErrorMessage(`Microphone error: ${errorMsg}`);
       setIsRecording(false);
     }
   };
@@ -184,7 +181,7 @@ export function AudioRecorder({
       onUploadSuccess?.(result.id);
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Upload failed';
-      setErrorMessage(`Failed to submit recording: ${errorMsg}`);
+      setErrorMessage(`Submission failed: ${errorMsg}`);
     } finally {
       setIsUploading(false);
     }
@@ -193,198 +190,149 @@ export function AudioRecorder({
   return (
     <div
       role="region"
-      aria-label="Live Audio Recorder"
-      className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8 shadow-xl backdrop-blur-sm space-y-6 ${className}`}
+      aria-label="Audio Recorder"
+      className={`rounded-lg border border-zinc-800 bg-zinc-900/60 p-5 space-y-4 ${className}`}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-rose-950/80 border border-rose-700/60 flex items-center justify-center text-rose-400">
-            <Mic className="w-5 h-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-white">Live Microphone Recording</h3>
-            <p className="text-xs text-slate-400">
-              Record classroom lectures directly inside your browser. 100% on-device capture.
-            </p>
-          </div>
+      {/* Device Header & Spec */}
+      <div className="flex items-center justify-between pb-3 border-b border-zinc-850">
+        <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
+          <Radio className="w-3.5 h-3.5 text-zinc-400" />
+          <span>MICROPHONE CAPTURE</span>
         </div>
-
-        {/* Live Status Pill */}
-        {isRecording && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="flex items-center gap-2 px-3 py-1 rounded-full bg-rose-950/80 border border-rose-500/50 text-xs font-semibold text-rose-300 animate-pulse shadow-sm shadow-rose-950"
-          >
-            <span className="w-2 h-2 rounded-full bg-rose-500" />
-            <span>{isPaused ? 'PAUSED' : 'RECORDING LIVE'}</span>
-          </div>
-        )}
+        <span className="text-[11px] font-mono text-zinc-500">
+          Opus 48kHz mono &bull; RAM buffer
+        </span>
       </div>
 
-      {/* Main Recording Display */}
-      <div className="text-center py-4 space-y-4">
-        {/* Animated Microphone Icon */}
-        <div className="relative inline-flex items-center justify-center">
-          <div
-            className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${
-              isRecording
-                ? isPaused
-                  ? 'bg-amber-950/70 border-2 border-amber-500 text-amber-400'
-                  : 'bg-rose-950/90 border-2 border-rose-500 text-rose-400 shadow-xl shadow-rose-900/40 animate-pulse'
-                : recordedBlob
-                ? 'bg-emerald-950/80 border-2 border-emerald-500/60 text-emerald-400'
-                : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-            }`}
-          >
-            <Mic className="w-10 h-10" />
+      {/* Counter & VU Meter Display */}
+      <div className="py-2 space-y-3">
+        <div className="flex items-baseline justify-between font-mono">
+          <div className="text-3xl font-semibold tracking-tight text-zinc-100">
+            {formatTime(recordingSeconds)}
           </div>
-
-          {/* Concentric sound wave pulses when active */}
-          {isRecording && !isPaused && (
-            <div className="absolute inset-0 rounded-full border border-rose-500/30 animate-ping pointer-events-none" />
-          )}
-        </div>
-
-        {/* Elapsed Timer Display */}
-        <div className="space-y-1">
-          <p
-            className="text-4xl font-black font-mono tracking-tight text-white"
-            aria-live="polite"
-          >
-            {formatSeconds(recordingSeconds)}
-          </p>
-          <p className="text-xs text-slate-500 font-mono">
+          <div className="text-xs text-zinc-500">
             {isRecording
               ? isPaused
-                ? 'Recording paused — click resume to continue'
-                : 'Microphone stream active (Opus 48kHz)'
+                ? 'PAUSED'
+                : 'RECORDING'
               : recordedBlob
-              ? `Capture duration: ${formatSeconds(recordingSeconds)}`
-              : 'Click start to begin capturing lecture audio'}
-          </p>
+              ? 'CAPTURED'
+              : 'IDLE'}
+          </div>
         </div>
 
-        {/* Audio Waveform Bars Simulation */}
-        {isRecording && !isPaused && (
-          <div className="flex items-center justify-center gap-1.5 h-8">
-            {[40, 75, 55, 90, 60, 30, 80, 65, 95, 50, 85, 45].map((height, idx) => (
+        {/* Minimal Audio Level Meter */}
+        <div className="h-1.5 w-full bg-zinc-950 rounded-sm overflow-hidden border border-zinc-850 flex gap-0.5">
+          {Array.from({ length: 24 }).map((_, idx) => {
+            const isActive = isRecording && !isPaused && (idx < (recordingSeconds % 12) * 2 + 4);
+            return (
               <div
                 key={idx}
-                className="w-1 bg-rose-500 rounded-full animate-pulse"
-                style={{
-                  height: `${height}%`,
-                  animationDelay: `${(idx % 4) * 0.15}s`,
-                }}
+                className={`flex-1 transition-colors duration-75 ${
+                  isActive
+                    ? idx > 18
+                      ? 'bg-rose-500'
+                      : idx > 12
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-500'
+                    : 'bg-zinc-850'
+                }`}
               />
-            ))}
-          </div>
-        )}
-
-        {/* Action Controls */}
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-          {!isRecording && !recordedBlob && (
-            <button
-              type="button"
-              onClick={startRecording}
-              className="px-6 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold shadow-lg shadow-rose-600/30 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <Mic className="w-4 h-4" />
-              <span>Start Recording</span>
-            </button>
-          )}
-
-          {isRecording && (
-            <>
-              <button
-                type="button"
-                onClick={pauseResumeRecording}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium border border-slate-700 transition-colors flex items-center gap-2"
-              >
-                {isPaused ? <Play className="w-4 h-4 text-emerald-400" /> : <Pause className="w-4 h-4 text-amber-400" />}
-                <span>{isPaused ? 'Resume' : 'Pause'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={stopRecording}
-                className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold shadow-lg shadow-rose-600/30 transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Square className="w-4 h-4 fill-current" />
-                <span>Stop Recording</span>
-              </button>
-            </>
-          )}
-
-          {recordedBlob && !isRecording && (
-            <button
-              type="button"
-              onClick={resetRecording}
-              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 text-xs font-medium transition-colors flex items-center gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Re-record</span>
-            </button>
-          )}
+            );
+          })}
         </div>
       </div>
 
-      {/* Audio Playback Preview & Title Input (after recording stops) */}
+      {/* Control Buttons */}
+      <div className="flex items-center gap-2 pt-1">
+        {!isRecording && !recordedBlob && (
+          <button
+            type="button"
+            onClick={startRecording}
+            className="px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+          >
+            <Mic className="w-3.5 h-3.5" />
+            <span>Start Recording</span>
+          </button>
+        )}
+
+        {isRecording && (
+          <>
+            <button
+              type="button"
+              onClick={pauseResumeRecording}
+              className="px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-700 text-xs font-medium transition-colors flex items-center gap-1.5"
+            >
+              {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+              <span>{isPaused ? 'Resume' : 'Pause'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={stopRecording}
+              className="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-white text-zinc-950 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Square className="w-3 h-3 fill-current" />
+              <span>Finish</span>
+            </button>
+          </>
+        )}
+
+        {recordedBlob && !isRecording && (
+          <button
+            type="button"
+            onClick={resetRecording}
+            className="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border border-zinc-800 text-xs font-medium transition-colors flex items-center gap-1"
+          >
+            <RotateCcw className="w-3 h-3 text-zinc-400" />
+            <span>Discard & Re-record</span>
+          </button>
+        )}
+      </div>
+
+      {/* Playback Review & Submission Form */}
       {recordedBlob && previewUrl && !isRecording && (
-        <div className="space-y-4 pt-4 border-t border-slate-800">
-          {/* Lecture Title Input */}
-          <div className="space-y-1.5">
-            <label htmlFor="recorded-title-input" className="block text-xs font-semibold text-slate-300">
-              Lecture Title <span className="text-slate-500 font-normal">(Optional)</span>
+        <div className="pt-3 border-t border-zinc-850 space-y-3">
+          <div className="space-y-1">
+            <label htmlFor="rec-title-input" className="block text-[11px] font-mono text-zinc-400">
+              Lecture Title
             </label>
             <input
-              id="recorded-title-input"
+              id="rec-title-input"
               type="text"
               value={lectureTitle}
               onChange={(e) => setLectureTitle(e.target.value)}
               placeholder="e.g. CS101: Distributed Systems"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 font-mono"
             />
           </div>
 
-          {/* Native Audio Preview */}
-          <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-3">
-            <Volume2 className="w-5 h-5 text-indigo-400 shrink-0" />
-            <audio
-              src={previewUrl}
-              controls
-              className="w-full h-8 accent-indigo-500"
-              aria-label="Recorded lecture preview audio"
-            />
+          <div className="p-2 rounded bg-zinc-950 border border-zinc-850 flex items-center gap-2">
+            <Volume2 className="w-4 h-4 text-zinc-500 shrink-0" />
+            <audio src={previewUrl} controls className="w-full h-7 accent-zinc-400" />
           </div>
 
-          {/* Submit / Upload Button */}
-          <div className="flex justify-end">
+          <div className="flex justify-end pt-1">
             <button
               type="button"
               disabled={isUploading}
               onClick={handleUpload}
-              className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2 rounded-md bg-zinc-100 hover:bg-white disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-950 text-xs font-semibold transition-colors cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>{isUploading ? 'Submitting to Local GPU...' : 'Process Recorded Audio'}</span>
+              {isUploading ? 'Ingesting...' : 'Ingest Recorded Audio'}
             </button>
           </div>
         </div>
       )}
 
-      {/* Error State */}
+      {/* Error state */}
       {errorMessage && (
         <div
           role="alert"
-          className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-700/60 text-xs text-rose-300 flex items-start gap-2.5"
+          className="p-2.5 rounded bg-rose-950/40 border border-rose-900/60 text-xs text-rose-300 flex items-center gap-2"
         >
-          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <span className="font-semibold">Recording Notice: </span>
-            {errorMessage}
-          </div>
+          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
     </div>

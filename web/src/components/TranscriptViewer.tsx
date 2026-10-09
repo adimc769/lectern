@@ -12,8 +12,6 @@ import {
   Copy,
   Check,
   Radio,
-  Sliders,
-  ChevronDown,
 } from 'lucide-react';
 import type { TranscriptSegmentDTO } from '@lectern/shared';
 
@@ -47,28 +45,24 @@ export function TranscriptViewer({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const speechUttRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Calculate total duration from segments or audio element
   const totalDuration = useMemo(() => {
     if (segments.length === 0) return 0;
     const last = segments[segments.length - 1];
     return last.endTime || last.startTime + 10;
   }, [segments]);
 
-  // Find currently active segment
   const activeSegmentIndex = useMemo(() => {
     return segments.findIndex(
       (s) => currentTime >= s.startTime && currentTime <= s.endTime
     );
   }, [segments, currentTime]);
 
-  // Initial time seek if provided
   useEffect(() => {
     if (initialTime > 0 && initialTime !== currentTime) {
       seekToTime(initialTime);
     }
   }, [initialTime]);
 
-  // Keep auto-scroll in view
   useEffect(() => {
     if (autoScroll && activeLineRef.current && scrollContainerRef.current) {
       activeLineRef.current.scrollIntoView({
@@ -78,7 +72,6 @@ export function TranscriptViewer({
     }
   }, [activeSegmentIndex, autoScroll]);
 
-  // Audio element listeners
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -94,7 +87,6 @@ export function TranscriptViewer({
     };
 
     const handleError = () => {
-      // Audio file missing or unplayable; automatically fallback to local speech synthesis
       setUseSpeechFallback(true);
     };
 
@@ -109,7 +101,7 @@ export function TranscriptViewer({
     };
   }, [onTimeUpdate]);
 
-  // Speech synthesis fallback loop when audio file is not available
+  // Speech synthesis fallback
   useEffect(() => {
     if (!useSpeechFallback) return;
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -119,7 +111,6 @@ export function TranscriptViewer({
       return;
     }
 
-    // When playing in speech synthesis fallback mode
     const activeSeg = segments[activeSegmentIndex >= 0 ? activeSegmentIndex : 0];
     if (activeSeg) {
       window.speechSynthesis.cancel();
@@ -128,7 +119,6 @@ export function TranscriptViewer({
       utt.volume = isMuted ? 0 : volume;
 
       utt.onend = () => {
-        // Advance to next segment
         const nextIdx = (activeSegmentIndex >= 0 ? activeSegmentIndex : 0) + 1;
         if (nextIdx < segments.length) {
           setCurrentTime(segments[nextIdx].startTime);
@@ -162,7 +152,6 @@ export function TranscriptViewer({
       setIsPlaying(false);
     } else {
       audio.play().then(() => setIsPlaying(true)).catch(() => {
-        // Fallback to speech synthesis if browser restricts audio
         setUseSpeechFallback(true);
         setIsPlaying(true);
       });
@@ -231,7 +220,6 @@ export function TranscriptViewer({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Filter segments for search
   const filteredSegments = useMemo(() => {
     if (!searchQuery.trim()) return segments;
     const q = searchQuery.toLowerCase();
@@ -239,94 +227,79 @@ export function TranscriptViewer({
   }, [segments, searchQuery]);
 
   return (
-    <div className={`flex flex-col h-full rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xl overflow-hidden backdrop-blur-sm ${className}`}>
-      {/* Hidden HTML5 Audio Element */}
+    <div
+      role="region"
+      aria-label="Synchronized Transcript"
+      className={`flex flex-col h-full rounded-lg border border-zinc-800 bg-zinc-900/40 shadow-sm overflow-hidden ${className}`}
+    >
       {audioUrl && !useSpeechFallback && (
-        <audio
-          ref={audioRef}
-          src={audioUrl}
-          preload="metadata"
-          aria-hidden="true"
-        />
+        <audio ref={audioRef} src={audioUrl} preload="metadata" aria-hidden="true" />
       )}
 
-      {/* Top Controls Header */}
-      <div className="p-4 border-b border-slate-800 bg-slate-950/40 flex flex-col sm:flex-row items-center justify-between gap-3">
-        {/* Search Bar */}
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+      {/* Toolbar */}
+      <div className="p-3 border-b border-zinc-850 bg-zinc-950/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        {/* Search */}
+        <div className="relative w-full sm:w-64">
+          <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search transcript..."
-            aria-label="Filter transcript text"
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+            aria-label="Search transcript"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 pl-8 py-1 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-700 font-mono"
           />
           {searchQuery && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono">
-              {filteredSegments.length} found
+            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-zinc-500 font-mono">
+              {filteredSegments.length} hits
             </span>
           )}
         </div>
 
-        {/* Toolbar items */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          {/* Auto-scroll toggle */}
+        {/* Controls */}
+        <div className="flex items-center gap-2 self-end sm:self-auto font-mono text-[11px]">
           <button
             type="button"
             onClick={() => setAutoScroll((prev) => !prev)}
-            aria-pressed={autoScroll}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+            className={`px-2 py-1 rounded border transition-colors ${
               autoScroll
-                ? 'bg-indigo-950/80 text-indigo-300 border-indigo-700/50'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+                ? 'bg-zinc-800 text-zinc-200 border-zinc-700'
+                : 'bg-zinc-900 text-zinc-500 border-zinc-800'
             }`}
           >
-            Auto-scroll {autoScroll ? 'ON' : 'OFF'}
+            auto-scroll: {autoScroll ? 'on' : 'off'}
           </button>
 
-          {/* Narration Mode Badge */}
-          <div
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium border flex items-center gap-1.5 ${
-              useSpeechFallback
-                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-700/40'
-                : 'bg-cyan-950/60 text-cyan-300 border-cyan-700/40'
-            }`}
-            title={useSpeechFallback ? 'Narrating with on-device speech synthesis' : 'Playing local audio recording'}
-          >
-            <Radio className="w-3 h-3 animate-pulse" />
-            <span className="text-[11px]">{useSpeechFallback ? 'Device Narration' : 'Audio Sync'}</span>
-          </div>
+          <span className="px-2 py-1 rounded border border-zinc-800 bg-zinc-900 text-zinc-400">
+            {useSpeechFallback ? 'tts narration' : 'audio sync'}
+          </span>
 
-          {/* Copy Transcript Button */}
           <button
             type="button"
             onClick={copyTranscriptText}
-            aria-label="Copy entire transcript to clipboard"
-            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title="Copy full transcript"
+            aria-label="Copy entire transcript text"
+            className="p-1.5 rounded border border-zinc-800 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-zinc-200 transition-colors"
+            title="Copy transcript text"
           >
-            {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+            {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      {/* Transcript Segments List */}
+      {/* Transcript Rows */}
       <div
         ref={scrollContainerRef}
-        role="region"
-        aria-label="Synchronized lecture transcript"
-        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-2.5 divide-y divide-slate-800/40 max-h-[500px]"
+        role="feed"
+        aria-label="Transcript lines"
+        className="flex-1 overflow-y-auto p-4 space-y-1 divide-y divide-zinc-850/40 max-h-[500px]"
       >
         {filteredSegments.length === 0 ? (
-          <div className="py-12 text-center text-slate-500 text-sm">
-            {searchQuery ? 'No matching transcript lines found.' : 'No transcript segments available.'}
+          <div className="py-12 text-center text-zinc-500 text-xs font-mono">
+            {searchQuery ? 'No lines matching filter query.' : 'No transcript data.'}
           </div>
         ) : (
           filteredSegments.map((segment) => {
-            const isActive =
-              currentTime >= segment.startTime && currentTime <= segment.endTime;
+            const isActive = currentTime >= segment.startTime && currentTime <= segment.endTime;
 
             return (
               <div
@@ -345,39 +318,16 @@ export function TranscriptViewer({
                     if (!isPlaying) togglePlay();
                   }
                 }}
-                aria-current={isActive ? 'time' : undefined}
-                className={`pt-2.5 pb-2 px-3 rounded-xl transition-all cursor-pointer group flex items-start gap-3 text-left ${
+                className={`pt-2 pb-1.5 px-3 rounded transition-colors cursor-pointer flex items-start gap-3 text-left ${
                   isActive
-                    ? 'bg-indigo-950/60 border-l-4 border-indigo-500 shadow-md shadow-indigo-950/50'
-                    : 'hover:bg-slate-800/50 border-l-4 border-transparent'
+                    ? 'bg-zinc-850 border-l-2 border-indigo-400 text-zinc-100'
+                    : 'hover:bg-zinc-900 border-l-2 border-transparent text-zinc-300'
                 }`}
               >
-                {/* Timestamp Pill */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    seekToTime(segment.startTime);
-                    if (!isPlaying) togglePlay();
-                  }}
-                  className={`px-2 py-0.5 rounded text-[11px] font-mono shrink-0 transition-colors ${
-                    isActive
-                      ? 'bg-indigo-600 text-white font-bold'
-                      : 'bg-slate-800 text-slate-400 group-hover:text-indigo-300 group-hover:bg-indigo-950/50'
-                  }`}
-                  aria-label={`Jump to ${formatTime(segment.startTime)}`}
-                >
+                <span className="px-1.5 py-0.5 rounded text-[11px] font-mono text-zinc-500 bg-zinc-950 border border-zinc-850 shrink-0 select-none">
                   {formatTime(segment.startTime)}
-                </button>
-
-                {/* Segment Text */}
-                <p
-                  className={`text-sm leading-relaxed transition-colors flex-1 ${
-                    isActive
-                      ? 'text-white font-medium'
-                      : 'text-slate-300 group-hover:text-white'
-                  }`}
-                >
+                </span>
+                <p className="text-xs leading-relaxed flex-1 select-text">
                   {segment.text}
                 </p>
               </div>
@@ -386,83 +336,68 @@ export function TranscriptViewer({
         )}
       </div>
 
-      {/* Bottom Sticky Synchronized Playback Bar */}
-      <div className="p-4 border-t border-slate-800 bg-slate-950/90 backdrop-blur-md space-y-3">
-        {/* Scrubber slider */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-slate-400 w-12 text-right">
-            {formatTime(currentTime)}
-          </span>
-
-          <div className="flex-1 relative flex items-center">
-            <input
-              type="range"
-              min={0}
-              max={totalDuration || 100}
-              step={0.5}
-              value={currentTime}
-              onChange={(e) => seekToTime(parseFloat(e.target.value))}
-              aria-label="Audio playback seeker"
-              aria-valuemin={0}
-              aria-valuemax={totalDuration}
-              aria-valuenow={currentTime}
-              aria-valuetext={formatTime(currentTime)}
-              className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <span className="text-xs font-mono text-slate-500 w-12">
-            {formatTime(totalDuration)}
-          </span>
+      {/* Clean Audio Transport Bar */}
+      <div className="p-3 border-t border-zinc-850 bg-zinc-950/80 space-y-2 font-mono">
+        {/* Scrubber */}
+        <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+          <span className="w-10 text-right">{formatTime(currentTime)}</span>
+          <input
+            type="range"
+            min={0}
+            max={totalDuration || 100}
+            step={0.5}
+            value={currentTime}
+            onChange={(e) => seekToTime(parseFloat(e.target.value))}
+            aria-label="Seek audio"
+            className="flex-1 h-1 bg-zinc-800 rounded appearance-none cursor-pointer accent-zinc-200"
+          />
+          <span className="w-10 text-zinc-600">{formatTime(totalDuration)}</span>
         </div>
 
-        {/* Player Controls */}
-        <div className="flex items-center justify-between">
-          {/* Left: Play/Pause and Skip buttons */}
-          <div className="flex items-center gap-2">
+        {/* Transport controls */}
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => handleSkip(-5)}
-              aria-label="Skip backward 5 seconds"
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-              title="Back 5s"
+              aria-label="Rewind 5 seconds"
+              className="p-1.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
             </button>
 
             <button
               type="button"
               onClick={togglePlay}
-              aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
-              className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+              className="px-3 py-1 rounded bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
             >
-              {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
+              {isPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+              <span>{isPlaying ? 'Pause' : 'Play'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleSkip(5)}
-              aria-label="Skip forward 5 seconds"
-              className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-              title="Forward 5s"
+              aria-label="Forward 5 seconds"
+              className="p-1.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
             >
-              <RotateCw className="w-4 h-4" />
+              <RotateCw className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Right: Speed & Volume Controls */}
           <div className="flex items-center gap-3">
-            {/* Playback Speed selector */}
-            <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-0.5">
+            {/* Speed pills */}
+            <div className="flex items-center gap-0.5 bg-zinc-900 border border-zinc-800 rounded p-0.5 text-[10px]">
               {[0.8, 1, 1.25, 1.5].map((rate) => (
                 <button
                   key={rate}
                   type="button"
                   onClick={() => handleRateChange(rate)}
-                  className={`px-2 py-1 rounded text-[11px] font-mono transition-colors ${
+                  className={`px-1.5 py-0.5 rounded transition-colors ${
                     playbackRate === rate
-                      ? 'bg-indigo-600 text-white font-bold'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-zinc-800 text-zinc-100 font-semibold'
+                      : 'text-zinc-500 hover:text-zinc-300'
                   }`}
                 >
                   {rate}x
@@ -470,18 +405,18 @@ export function TranscriptViewer({
               ))}
             </div>
 
-            {/* Volume Control */}
-            <div className="hidden sm:flex items-center gap-2">
+            {/* Volume */}
+            <div className="hidden sm:flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={toggleMute}
                 aria-label={isMuted ? 'Unmute' : 'Mute'}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-zinc-500 hover:text-zinc-300"
               >
                 {isMuted || volume === 0 ? (
-                  <VolumeX className="w-4 h-4 text-rose-400" />
+                  <VolumeX className="w-3.5 h-3.5 text-rose-400" />
                 ) : (
-                  <Volume2 className="w-4 h-4" />
+                  <Volume2 className="w-3.5 h-3.5" />
                 )}
               </button>
               <input
@@ -491,11 +426,8 @@ export function TranscriptViewer({
                 step={0.05}
                 value={isMuted ? 0 : volume}
                 onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                aria-label="Volume level"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round((isMuted ? 0 : volume) * 100)}
-                className="w-16 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                aria-label="Volume"
+                className="w-14 h-1 bg-zinc-800 rounded appearance-none cursor-pointer accent-zinc-200"
               />
             </div>
           </div>
