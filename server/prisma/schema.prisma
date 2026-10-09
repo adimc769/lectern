@@ -69,3 +69,43 @@ model KeyTerm {
 
   @@index([lectureId])
 }
+
+model Document {
+  id        String   @id @default(uuid())
+  title     String
+  docType   String   // PDF, DOCX, TXT
+  status    String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  filePath  String
+  pageCount Int      @default(0)
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pages     DocumentPage[]
+  chunks    DocumentChunk[]
+}
+
+model DocumentPage {
+  id          String   @id @default(uuid())
+  documentId  String
+  pageNo      Int
+  text        String
+  sectionsJson String  @default("[]") // Serialized JSON array of detected section headings
+
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+model DocumentChunk {
+  id            String   @id @default(uuid())
+  documentId    String
+  pageNo        Int      @default(1)
+  section       String?
+  text          String
+  embeddingJson String   // Serialized JSON array of float numbers (768-dim from nomic-embed-text)
+
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}

@@ -1,14 +1,15 @@
 export type LectureStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
-export type PipelineStage = 
-  | 'IDLE' 
-  | 'CONVERTING_AUDIO' 
-  | 'TRANSCRIBING' 
-  | 'CHUNKING' 
-  | 'GENERATING_EMBEDDINGS' 
-  | 'SUMMARIZING' 
-  | 'EXTRACTING_CARDS' 
-  | 'COMPLETED' 
+export type PipelineStage =
+  | 'IDLE'
+  | 'PROCESSING'
+  | 'CONVERTING_AUDIO'
+  | 'TRANSCRIBING'
+  | 'CHUNKING'
+  | 'GENERATING_EMBEDDINGS'
+  | 'SUMMARIZING'
+  | 'EXTRACTING_CARDS'
+  | 'COMPLETED'
   | 'FAILED';
 
 export interface TranscriptSegmentDTO {
@@ -99,4 +100,20 @@ export interface SystemStatusDTO {
     llm: string;
     embeddings: string;
   };
+  lastCheckedAt?: string;
+  ffmpegReady?: boolean;
+  ollamaModels?: string[];
+  whisperLatencyMs?: number;
+  llmTokensPerSec?: number | null;
+  transcriptionRealtimeFactor?: number;
+  details?: {
+    nvidiaSmiOk: boolean;
+    whisperCli: boolean;
+    whisperModel: boolean;
+  };
 }
+
+export type DocumentType = 'PDF' | 'DOCX' | 'TXT';
+export type DocumentStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+export interface DocumentPageDTO { pageNo: number; text: string; sections: string[]; }
+export interface DocumentDTO { id: string; title: string; docType: DocumentType; status: DocumentStatus; filePath: string; pageCount: number; createdAt: string; updatedAt: string; error?: string; pages?: DocumentPageDTO[]; }

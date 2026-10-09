@@ -7,6 +7,7 @@ import {
   Mic,
   X,
   FileAudio,
+  FileText,
   Square,
   Play,
   Pause,
@@ -17,21 +18,53 @@ import {
   Check,
 } from 'lucide-react';
 import { uploadLecture } from '../lib/api';
+import { createTextDocument, uploadDocument } from '../lib/documents';
+
+const DOC_MAX_BYTES = 25 * 1024 * 1024;
+const DOC_EXTENSIONS = ['pdf', 'docx', 'txt'];
+
+/**
+ * Validates a candidate document file in SPEC order: extension → size → empty.
+ * Returns the exact SPEC copy for the first failure, or null when valid.
+ */
+function validateDocumentFile(file: File): string | null {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  if (!DOC_EXTENSIONS.includes(ext)) {
+    return 'That file type is not supported. Only PDF, DOCX, and TXT files are accepted — choose a different file.';
+  }
+  if (file.size > DOC_MAX_BYTES) {
+    return 'File exceeds the 25 MB limit. Split the document or use a smaller file, then try again.';
+  }
+  if (file.size === 0) {
+    return 'This file contains no readable text. Check the file contents and try again.';
+  }
+  return null;
+}
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: 'upload' | 'record' | 'document';
 };
 
-export function IntakeModal({ isOpen, onClose }: Props) {
+export function IntakeModal({ isOpen, onClose, initialTab }: Props) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'upload' | 'record'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'record' | 'document'>(
+    initialTab ?? 'upload'
+  );
 
   // File Upload State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState('');
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Document Upload State (single file XOR pasted notes, never both)
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docTitle, setDocTitle] = useState('');
+  const [docText, setDocText] = useState('');
+  const [isDocDragOver, setIsDocDragOver] = useState(false);
+  const docFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Microphone Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -49,16 +82,29 @@ export function IntakeModal({ isOpen, onClose }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Close on Escape key
+  // Close on Escape key — on the document tab this discards without storing anything
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
+        if (activeTab === 'document') {
+          setDocFile(null);
+          setDocText('');
+          setErrorMessage(null);
+        }
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, activeTab]);
+
+  // Open directly on the requested tab when the caller asks for one
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+      setErrorMessage(null);
+    }
+  }, [isOpen, initialTab]);
 
   // Clean up streams & URLs
   useEffect(() => {
@@ -118,6 +164,65 @@ export function IntakeModal({ isOpen, onClose }: Props) {
       }
       setErrorMessage(null);
     }
+  };
+
+  // Document intake handlers (single file XOR pasted notes)
+  const acceptDocFile = (file: File) => {
+    const violation = validateDocumentFile(file);
+    if (violation) {
+      setErrorMessage(violation);
+      return;
+    }
+    setDocFile(file);
+    setDocText('');
+    setErrorMessage(null);
+    if (!docTitle) {
+      setDocTitle(file.name.replace(/\.[^/.]+$/, ''));
+    }
+  };
+
+  const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      acceptDocFile(e.target.files[0]);
+      e.target.value = '';
+    }
+  };
+
+  const handleDocDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!docText.trim()) setIsDocDragOver(true);
+  };
+
+  const handleDocDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDocDragOver(false);
+  };
+
+  const handleDocDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDocDragOver(false);
+    if (docText.trim()) return;
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      acceptDocFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleDocTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDocText(e.target.value);
+    if (errorMessage) setErrorMessage(null);
+  };
+
+  const removeDocFile = () => {
+    setDocFile(null);
+    setErrorMessage(null);
+  };
+
+  /** Clears document inputs with no library trace (pre-upload discard). */
+  const discardDocument = () => {
+    setDocFile(null);
+    setDocText('');
+    setDocTitle('');
+    setErrorMessage(null);
   };
 
   // Recording handlers
@@ -217,8 +322,51 @@ export function IntakeModal({ isOpen, onClose }: Props) {
     setErrorMessage(null);
   };
 
+  // Document submit — navigates to the source view on success
+  const handleDocumentSubmit = async () => {
+    const trimmedText = docText.trim();
+    const hasFile = docFile !== null;
+    const hasText = trimmedText.length > 0;
+    if ((hasFile && hasText) || (!hasFile && !hasText)) return;
+    if (docFile) {
+      const violation = validateDocumentFile(docFile);
+      if (violation) {
+        setErrorMessage(violation);
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const finalTitle =
+        docTitle.trim() ||
+        (docFile ? docFile.name.replace(/\.[^/.]+$/, '') : 'Pasted Notes');
+      const res = docFile
+        ? await uploadDocument(docFile, finalTitle)
+        : await createTextDocument(finalTitle, trimmedText);
+      discardDocument();
+      onClose();
+      // Land on the document source view with live extraction progress
+      router.push(`/documents/${res.id}`);
+    } catch (err: unknown) {
+      setIsSubmitting(false);
+      setErrorMessage(err instanceof Error ? err.message : 'Upload failed. Please retry.');
+    }
+  };
+
+  const hasDocFile = docFile !== null;
+  const hasDocText = docText.trim().length > 0;
+  const canSubmitDocument =
+    !isSubmitting && ((hasDocFile && !hasDocText) || (!hasDocFile && hasDocText)) && !errorMessage;
+
   // Submit & Navigate to /lectures/[id]
   const handleSubmit = async () => {
+    if (activeTab === 'document') {
+      await handleDocumentSubmit();
+      return;
+    }
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -266,7 +414,7 @@ export function IntakeModal({ isOpen, onClose }: Props) {
         <div className="px-6 py-4 border-b border-[#E5E5DF] dark:border-[#1E293B] flex items-center justify-between">
           <div>
             <h2 id="intake-title" className="text-base font-semibold text-[#0F172A] dark:text-white">
-              Add Lecture
+              Add Study Material
             </h2>
             <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-0.5">
               Transcribed and summarized on your device
@@ -275,17 +423,20 @@ export function IntakeModal({ isOpen, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close dialog"
-            className="p-1 rounded-md text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F4F4F0] dark:hover:bg-[#1E293B] transition-colors"
+            aria-label={activeTab === 'document' ? 'Close document upload' : 'Close dialog'}
+            title={activeTab === 'document' ? 'Close document upload' : 'Close dialog'}
+            className="p-1 rounded-md text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F4F4F0] dark:hover:bg-[#1E293B] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Selection */}
-        <div className="flex border-b border-[#E5E5DF] dark:border-[#1E293B] px-6 bg-[#FAF9F5] dark:bg-[#101827]">
+        <div role="tablist" aria-label="Study material intake" className="flex border-b border-[#E5E5DF] dark:border-[#1E293B] px-6 bg-[#FAF9F5] dark:bg-[#101827]">
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'upload'}
             onClick={() => {
               setActiveTab('upload');
               setErrorMessage(null);
@@ -302,6 +453,8 @@ export function IntakeModal({ isOpen, onClose }: Props) {
 
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'record'}
             onClick={() => {
               setActiveTab('record');
               setErrorMessage(null);
@@ -314,6 +467,24 @@ export function IntakeModal({ isOpen, onClose }: Props) {
           >
             <Mic className="w-3.5 h-3.5" />
             <span>Record Live</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'document'}
+            onClick={() => {
+              setActiveTab('document');
+              setErrorMessage(null);
+            }}
+            className={`py-2.5 px-4 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === 'document'
+                ? 'border-[#0F172A] dark:border-white text-[#0F172A] dark:text-white'
+                : 'border-transparent text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A]'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Upload Document</span>
           </button>
         </div>
 
@@ -400,7 +571,7 @@ export function IntakeModal({ isOpen, onClose }: Props) {
                 )}
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'record' ? (
             /* Microphone Record Form */
             <div className="space-y-4">
               <div className="space-y-1.5">
@@ -488,6 +659,135 @@ export function IntakeModal({ isOpen, onClose }: Props) {
                 )}
               </div>
             </div>
+          ) : (
+            /* Document Upload Form — single file XOR pasted notes */
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="modal-doc-title" className="block text-xs font-medium text-[#0F172A] dark:text-slate-200">
+                  Document Title <span className="text-[#94A3B8] font-normal">(Optional)</span>
+                </label>
+                <input
+                  id="modal-doc-title"
+                  type="text"
+                  value={docTitle}
+                  onChange={(e) => setDocTitle(e.target.value)}
+                  placeholder="e.g. Biology 101: Cell Respiration notes"
+                  className="w-full bg-[#FFFFFF] dark:bg-[#0B0F19] border border-[#CBD5E1] dark:border-[#1E293B] rounded-lg px-3.5 py-2 text-sm text-[#0F172A] dark:text-white placeholder-[#94A3B8] focus:outline-none focus:border-[#0F172A] dark:focus:border-[#38BDF8]"
+                />
+              </div>
+
+              {/* Document dropzone */}
+              <div
+                role="button"
+                tabIndex={hasDocText ? -1 : 0}
+                aria-label="Upload a document (PDF, DOCX, or TXT)"
+                aria-disabled={hasDocText}
+                onDragOver={handleDocDragOver}
+                onDragLeave={handleDocDragLeave}
+                onDrop={handleDocDrop}
+                onClick={() => {
+                  if (!hasDocText) docFileInputRef.current?.click();
+                }}
+                onKeyDown={(e) => {
+                  if (hasDocText) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    docFileInputRef.current?.click();
+                  }
+                }}
+                className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+                  hasDocText
+                    ? 'border-[#E5E5DF] dark:border-[#1E293B] bg-[#F4F4F0] dark:bg-[#0B0F19] opacity-60 cursor-not-allowed'
+                    : isDocDragOver
+                    ? 'border-[#0F172A] dark:border-white bg-[#FAF9F5] dark:bg-[#19233C] cursor-pointer'
+                    : docFile
+                    ? 'border-[#0D9488] bg-[#F0FDFA] dark:bg-[#0D9488]/10 cursor-pointer'
+                    : 'border-[#CBD5E1] dark:border-[#1E293B] hover:border-[#94A3B8] bg-[#FAF9F5] dark:bg-[#0B0F19] cursor-pointer'
+                }`}
+              >
+                <input
+                  ref={docFileInputRef}
+                  id="modal-doc-file-input"
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  disabled={hasDocText}
+                  className="hidden"
+                  onChange={handleDocFileChange}
+                />
+
+                {docFile ? (
+                  <div className="flex items-center justify-between text-left px-2">
+                    <div className="flex items-center gap-3 truncate">
+                      <div className="w-8 h-8 rounded-lg bg-[#0D9488]/20 text-[#0D9488] flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="truncate">
+                        <p
+                          title={docFile.name}
+                          className="text-xs font-semibold text-[#0F172A] dark:text-white truncate"
+                        >
+                          {docFile.name}
+                        </p>
+                        <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                          {(docFile.size / (1024 * 1024)).toFixed(1)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeDocFile();
+                      }}
+                      aria-label="Remove selected document"
+                      title="Remove selected document"
+                      className="text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white p-2.5 -m-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 py-2">
+                    <div className="w-9 h-9 rounded-full bg-[#E2E8F0] dark:bg-[#1E293B] text-[#64748B] dark:text-[#94A3B8] flex items-center justify-center mx-auto mb-2">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <p className="text-xs font-medium text-[#0F172A] dark:text-white">
+                      Drop a document here, or{' '}
+                      <span className="text-[#2563EB] dark:text-[#60A5FA] underline">browse files</span>
+                    </p>
+                    <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                      Accepts PDF, DOCX, TXT up to 25 MB. Single file per upload.
+                    </p>
+                    {hasDocText && (
+                      <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                        Pasted notes active — clear the text to choose a file instead.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Paste-text box, mutually exclusive with file selection */}
+              <div className="space-y-1.5">
+                <label htmlFor="modal-doc-text" className="block text-xs font-medium text-[#0F172A] dark:text-slate-200">
+                  Or paste notes
+                </label>
+                <textarea
+                  id="modal-doc-text"
+                  value={docText}
+                  onChange={handleDocTextChange}
+                  disabled={hasDocFile}
+                  rows={5}
+                  placeholder="Paste your notes here… (TXT-equivalent plain text, stored as a TXT source)"
+                  className="w-full min-h-32 bg-[#FFFFFF] dark:bg-[#0B0F19] border border-[#CBD5E1] dark:border-[#1E293B] rounded-lg px-3.5 py-2 text-sm text-[#0F172A] dark:text-white placeholder-[#94A3B8] focus:outline-none focus:border-[#0F172A] dark:focus:border-[#38BDF8] disabled:opacity-60 resize-y"
+                />
+                {hasDocFile && (
+                  <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                    File selected — remove the file to paste notes instead.
+                  </p>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Local Processing Guarantee Note */}
@@ -510,25 +810,44 @@ export function IntakeModal({ isOpen, onClose }: Props) {
 
         {/* Modal Footer */}
         <div className="px-6 py-4 bg-[#FAF9F5] dark:bg-[#101827] border-t border-[#E5E5DF] dark:border-[#1E293B] flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white transition-colors"
-          >
-            Cancel
-          </button>
+          {activeTab === 'document' ? (
+            <button
+              type="button"
+              onClick={() => {
+                discardDocument();
+                onClose();
+              }}
+              className="px-4 py-2 rounded-lg text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white transition-colors"
+            >
+              Discard Document
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-xs font-medium text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+          )}
 
           <button
             type="button"
             disabled={
-              isSubmitting ||
-              (activeTab === 'upload' && !selectedFile) ||
-              (activeTab === 'record' && (!recordedBlob || isRecording))
+              activeTab === 'document'
+                ? !canSubmitDocument
+                : isSubmitting ||
+                  (activeTab === 'upload' && !selectedFile) ||
+                  (activeTab === 'record' && (!recordedBlob || isRecording))
             }
             onClick={handleSubmit}
             className="px-5 py-2 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-[#0F172A] dark:disabled:hover:bg-white text-white dark:text-[#0F172A] text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed shadow-xs"
           >
-            {isSubmitting ? 'Starting local processing...' : 'Process Lecture'}
+            {isSubmitting
+              ? 'Starting local processing...'
+              : activeTab === 'document'
+              ? 'Process Document'
+              : 'Process Lecture'}
           </button>
         </div>
       </div>

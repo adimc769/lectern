@@ -26,6 +26,7 @@ const STAGE_LABELS: Record<PipelineStage, string> = {
   GENERATING_EMBEDDINGS: 'SQLite vector embedding (nomic-embed-text)',
   SUMMARIZING: 'Topic synthesis (Ollama qwen2.5:14b)',
   EXTRACTING_CARDS: 'Flashcard & key term extraction',
+  PROCESSING: 'Processing document',
   COMPLETED: 'Pipeline execution complete',
   FAILED: 'Execution failed',
 };

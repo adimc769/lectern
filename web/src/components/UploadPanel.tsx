@@ -31,6 +31,7 @@ const STAGE_LABELS: Record<PipelineStage, { label: string; icon: string }> = {
   GENERATING_EMBEDDINGS: { label: 'Generating nomic-embed-text embeddings...', icon: '🧠' },
   SUMMARIZING: { label: 'Synthesizing lecture summary (qwen2.5:14b)...', icon: '📝' },
   EXTRACTING_CARDS: { label: 'Extracting key terms & flashcards...', icon: '🗂️' },
+  PROCESSING: { label: 'Processing document...', icon: '⚙️' },
   COMPLETED: { label: 'Processing complete! Ready for offline study.', icon: '✅' },
   FAILED: { label: 'Processing failed', icon: '❌' },
 };

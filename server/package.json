@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "prisma generate",
-
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "seed:demo": "tsx ../scripts/seed-demo.ts"
   },
   "dependencies": {
     "@lectern/shared": "*",
@@ -18,7 +18,9 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "multer": "^1.4.5-lts.1"
+    "mammoth": "^1.13.0",
+    "multer": "^1.4.5-lts.1",
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
