@@ -140,7 +140,7 @@ export default function HomePage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0F172A] dark:text-white">
             Ready to study?
           </h1>
-          <p className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+          <p className="text-sm text-[#475569] dark:text-[#CBD5E1]">
             Select a lecture below or add a new recording to generate notes and flashcards.
           </p>
         </div>
@@ -168,7 +168,7 @@ export default function HomePage() {
               </h2>
               <OfflineBadge source={source} compact />
             </div>
-            <p className="text-xs text-[#475569] dark:text-[#94A3B8] leading-relaxed max-w-xl">
+            <p className="text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed max-w-xl">
               One click seeds a live lecture on the backend, then opens the full study
               workspace: summary, transcript, flashcards, and Q&amp;A.
             </p>
@@ -199,7 +199,7 @@ export default function HomePage() {
       {seedError && (
         <div
           role="alert"
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 pl-3.5 pr-2 py-2 rounded-2xl bg-[#FFFFFF] dark:bg-[#131B2E] border border-amber-200 dark:border-amber-900/60 shadow-xs text-xs font-medium text-[#0F172A] dark:text-white max-w-[calc(100vw-2rem)]"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 pl-3.5 pr-2 py-2 rounded-2xl bg-[#FFFFFF] dark:bg-[#131B2E] border border-amber-200 dark:border-amber-900/60 shadow-xs text-sm font-medium text-[#0F172A] dark:text-white max-w-[calc(100vw-2rem)]"
         >
           <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden="true" />
           <span className="truncate">{seedError}</span>
@@ -207,7 +207,7 @@ export default function HomePage() {
             type="button"
             onClick={() => setSeedError(null)}
             aria-label="Dismiss notification"
-            className="p-1.5 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-[#FAF9F5] dark:text-[#94A3B8] dark:hover:text-white dark:hover:bg-[#1E293B] transition-colors shrink-0 cursor-pointer"
+            className="p-1.5 rounded-lg text-[#475569] hover:text-[#0F172A] hover:bg-[#FAF9F5] dark:text-[#CBD5E1] dark:hover:text-white dark:hover:bg-[#1E293B] transition-colors shrink-0 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -221,7 +221,7 @@ export default function HomePage() {
             <h2 className="text-base font-semibold text-[#0F172A] dark:text-white">
               Add new lecture
             </h2>
-            <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+            <p className="text-sm text-[#475569] dark:text-[#CBD5E1]">
               Upload audio files or record a classroom lecture with your microphone.
             </p>
           </div>
@@ -230,7 +230,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setIsIntakeOpen(true)}
-              className="px-4 py-2 rounded-lg bg-[#FAF9F5] dark:bg-[#19233C] hover:bg-[#F4F4F0] dark:hover:bg-[#1E293B] text-[#0F172A] dark:text-white border border-[#E5E5DF] dark:border-[#1E293B] text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer"
+              className="px-4 py-2 rounded-lg bg-[#FAF9F5] dark:bg-[#19233C] hover:bg-[#F4F4F0] dark:hover:bg-[#1E293B] text-[#0F172A] dark:text-white border border-[#E5E5DF] dark:border-[#1E293B] text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer"
             >
               <Mic className="w-3.5 h-3.5 text-rose-500" />
               <span>Record lecture</span>
@@ -239,7 +239,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setIsIntakeOpen(true)}
-              className="px-4 py-2 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
+              className="px-4 py-2 rounded-lg bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-xs"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Browse files</span>
@@ -248,15 +248,15 @@ export default function HomePage() {
         </div>
 
         {/* Technical specs & Local notice */}
-        <div className="pt-3 border-t border-[#F4F4F0] dark:border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#64748B] dark:text-[#94A3B8]">
+        <div className="pt-3 border-t border-[#F4F4F0] dark:border-[#1E293B] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-[#475569] dark:text-[#CBD5E1]">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[11px] text-[#94A3B8]">Formats:</span>
+            <span className="text-sm font-semibold text-[#475569] dark:text-[#CBD5E1]">Formats:</span>
             <span>MP3, WAV, M4A, WebM, FLAC (up to 2 GB)</span>
           </div>
 
           <div className="flex items-center gap-1.5 text-[#0D9488]">
             <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-            <span className="font-medium text-[11px]">Processed locally on your device</span>
+            <span className="font-medium text-sm">Processed locally on your device</span>
           </div>
         </div>
       </div>
@@ -264,13 +264,13 @@ export default function HomePage() {
       {/* Continue Studying Section (if lectures exist) */}
       {mostRecentLecture && (
         <div className="space-y-3">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-[#475569] dark:text-[#CBD5E1]">
             Continue studying
           </h2>
 
           <div className="rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1.5 min-w-0">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#64748B] dark:text-[#94A3B8]">
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#475569] dark:text-[#CBD5E1]">
                 <span className="inline-flex items-center gap-1 text-[#0D9488] font-semibold">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>{mostRecentLecture.status}</span>
@@ -290,7 +290,7 @@ export default function HomePage() {
               </h3>
 
               {mostRecentLecture.summary && (
-                <p className="text-xs text-[#64748B] dark:text-[#94A3B8] line-clamp-2 max-w-2xl leading-relaxed">
+                <p className="text-sm text-[#475569] dark:text-[#CBD5E1] line-clamp-2 max-w-2xl leading-relaxed">
                   {mostRecentLecture.summary}
                 </p>
               )}
@@ -298,7 +298,7 @@ export default function HomePage() {
 
             <Link
               href={`/lectures/${mostRecentLecture.id}`}
-              className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0 shadow-xs"
+              className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0 shadow-xs"
             >
               <span>Continue studying</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -310,40 +310,40 @@ export default function HomePage() {
       {/* Recent Lectures Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-[#475569] dark:text-[#CBD5E1]">
             Recent lectures
           </h2>
 
           <Link
             href="/lectures"
-            className="text-xs font-medium text-[#2563EB] dark:text-[#60A5FA] hover:underline"
+            className="text-sm font-medium text-[#2563EB] dark:text-[#60A5FA] hover:underline"
           >
             View all lectures &rarr;
           </Link>
         </div>
 
         {isLoading ? (
-          <div className="p-12 text-center rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] text-xs text-[#64748B]">
+          <div className="p-12 text-center rounded-2xl border border-[#E5E5DF] dark:border-[#1E293B] bg-[#FFFFFF] dark:bg-[#131B2E] text-sm text-[#475569] dark:text-[#CBD5E1]">
             Loading your lectures...
           </div>
         ) : lectures.length === 0 ? (
           /* Empty State for New User */
           <div className="rounded-2xl border border-dashed border-[#CBD5E1] dark:border-[#1E293B] p-12 text-center space-y-4 bg-[#FAF9F5] dark:bg-[#101827]">
-            <div className="w-12 h-12 rounded-xl bg-[#E2E8F0] dark:bg-[#1E293B] text-[#64748B] dark:text-[#94A3B8] flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-[#E2E8F0] dark:bg-[#1E293B] text-[#475569] dark:text-[#CBD5E1] flex items-center justify-center mx-auto">
               <BookOpen className="w-6 h-6" />
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-bold text-[#0F172A] dark:text-white">
                 No lectures yet.
               </h3>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] max-w-sm mx-auto">
+              <p className="text-sm text-[#475569] dark:text-[#CBD5E1] max-w-sm mx-auto">
                 Upload your first lecture to get a transcript, summary, key terms, and flashcards.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setIsIntakeOpen(true)}
-              className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-xs font-semibold transition-colors inline-flex items-center gap-2 cursor-pointer shadow-xs"
+              className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors inline-flex items-center gap-2 cursor-pointer shadow-xs"
             >
               <Plus className="w-4 h-4" />
               <span>Upload your first lecture</span>
@@ -358,7 +358,7 @@ export default function HomePage() {
                 className="p-4 sm:px-6 hover:bg-[#FAF9F5] dark:hover:bg-[#182238] transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
               >
                 <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2 text-[11px] font-mono text-[#64748B] dark:text-[#94A3B8]">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[#475569] dark:text-[#CBD5E1]">
                     <span>Audio {formatAudioLength(lecture.duration || 0)}</span>
                     {getProcessingMs(lecture) !== null && (
                       <>
@@ -380,7 +380,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Sub-tools Quick Jump */}
-                <div className="flex items-center gap-3 shrink-0 text-xs text-[#64748B] dark:text-[#94A3B8]">
+                <div className="flex items-center gap-3 shrink-0 text-xs text-[#475569] dark:text-[#CBD5E1]">
                   <Link
                     href={`/lectures/${lecture.id}?tab=summary`}
                     className="hover:text-[#0F172A] dark:hover:text-white flex items-center gap-1"
