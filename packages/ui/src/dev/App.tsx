@@ -9,9 +9,10 @@ import {
   Sliders,
   Wifi,
   WifiOff,
+  Sparkles,
 } from 'lucide-react';
 import { createMockApiClient } from '../mockApi';
-import type { LectureDetail, LectureListItem, LectureProgress } from '../types';
+import type { LectureDetail, LectureListItem, LectureProgress, QuizQuestion } from '../types';
 import { OfflineBadge } from '../components/OfflineBadge';
 import { UploadPanel } from '../components/UploadPanel';
 import { LectureList } from '../components/LectureList';
@@ -21,8 +22,24 @@ import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
 import { FailedState } from '../components/FailedState';
 import { JobProgressState } from '../components/JobProgressState';
+import { DeckPlayer } from '../study/DeckPlayer';
+import { QuizPlayer } from '../study/QuizPlayer';
+import { StudyHome } from '../study/StudyHome';
+import { CompletionScreen } from '../study/CompletionScreen';
+import { StudyMascot } from '../study/StudyMascot';
+import { rate, MASTERED_BOX } from '../study/srs';
+import {
+  getAllBoxes,
+  getBox,
+  setBox,
+  getStreak,
+  recordStudyDay,
+  recordSession,
+} from '../study/studyStore';
+import type { MockLecternApi } from '../mockApi';
+import '../study/study.css';
 
-type ActiveView = 'lectures' | 'ask' | 'upload' | 'states-demo';
+type ActiveView = 'lectures' | 'ask' | 'upload' | 'study' | 'states-demo';
 
 export const App: React.FC = () => {
   // Initialize mock API client
@@ -174,6 +191,19 @@ export const App: React.FC = () => {
 
             <button
               type="button"
+              onClick={() => setActiveView('study')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeView === 'study'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Study Circuit</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveView('upload')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeView === 'upload'
@@ -283,6 +313,15 @@ export const App: React.FC = () => {
         </button>
         <button
           type="button"
+          onClick={() => setActiveView('study')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
+            activeView === 'study' ? 'bg-indigo-600 text-white' : 'text-slate-400'
+          }`}
+        >
+          Study Circuit
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveView('upload')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
             activeView === 'upload' ? 'bg-indigo-600 text-white' : 'text-slate-400'
@@ -346,6 +385,18 @@ export const App: React.FC = () => {
                 />
               )}
             </div>
+          </div>
+        )}
+
+        {/* VIEW 2: Study Circuit (playful study-first mode) */}
+        {activeView === 'study' && (
+          <div className="max-w-4xl mx-auto">
+            <StudyCircuitView
+              api={mockApi}
+              lectures={lectures}
+              onOpenSource={handleNavigateToCitation}
+              onAsk={() => setActiveView('ask')}
+            />
           </div>
         )}
 
@@ -506,3 +557,204 @@ export const App: React.FC = () => {
 };
 
 export default App;
+
+/**
+ * Study Circuit demo view: StudyHome -> Deck/Quiz player -> CompletionScreen,
+ * backed by the mock API fixtures and persisted via studyStore (localStorage).
+ */
+const StudyCircuitView: React.FC<{
+  api: MockLecternApi;
+  lectures: LectureListItem[];
+  onOpenSource: (lectureId: string, timestampSec: number) => void;
+  onAsk: () => void;
+}> = ({ api, lectures, onOpenSource, onAsk }) => {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'deck' | 'quiz'>('deck');
+  const [detail, setDetail] = useState<LectureDetail | null>(null);
+  const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
+  const [done, setDone] = useState<{ headline: string; seconds: number } | null>(null);
+  const [statsTick, setStatsTick] = useState(0);
+  const [homeRows, setHomeRows] = useState<
+    Array<{ id: string; title: string; cardCount: number; masteredCount: number; quizCount: number }>
+  >([]);
+
+  // Study-home stats across all lectures
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const rows = await Promise.all(
+        lectures.map(async (l) => {
+          try {
+            const d = await api.getLecture(l.id);
+            const q = await api.getQuiz(l.id).catch(() => [] as QuizQuestion[]);
+            const boxes = getAllBoxes(l.id);
+            const mastered = (d.flashcards || []).filter(
+              (_, i) => (boxes[`card-${i}`] ?? 1) >= MASTERED_BOX
+            ).length;
+            return {
+              id: l.id,
+              title: l.title,
+              cardCount: (d.flashcards || []).length,
+              masteredCount: mastered,
+              quizCount: q.length,
+            };
+          } catch {
+            return { id: l.id, title: l.title, cardCount: 0, masteredCount: 0, quizCount: 0 };
+          }
+        })
+      );
+      if (live) setHomeRows(rows);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [api, lectures, statsTick]);
+
+  // Load selected lecture detail + quiz
+  useEffect(() => {
+    if (!selectedId) {
+      setDetail(null);
+      setQuiz([]);
+      return;
+    }
+    let live = true;
+    (async () => {
+      const d = await api.getLecture(selectedId);
+      const q = await api.getQuiz(selectedId).catch(() => [] as QuizQuestion[]);
+      if (live) {
+        setDetail(d);
+        setQuiz(q);
+        setDone(null);
+        setTab('deck');
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [api, selectedId]);
+
+  const streak = getStreak();
+  const totalMastered = homeRows.reduce((sum, r) => sum + r.masteredCount, 0);
+
+  // --- Home ---
+  if (!selectedId) {
+    return (
+      <StudyHome
+        lectures={homeRows}
+        streak={streak}
+        totalMastered={totalMastered}
+        onOpenLecture={setSelectedId}
+        onStudyAll={() => {
+          const next = homeRows.find((r) => r.masteredCount < r.cardCount) ?? homeRows[0];
+          if (next) setSelectedId(next.id);
+        }}
+      />
+    );
+  }
+
+  // --- Loading ---
+  if (!detail) {
+    return <LoadingState message="Opening your study circuit..." />;
+  }
+
+  // --- Completion ---
+  if (done) {
+    return (
+      <div className="space-y-4">
+        <StudyMascot message="Circuit complete. Sharp work." />
+        <CompletionScreen
+          title={detail.title}
+          scoreText={done.headline}
+          secondsStudied={done.seconds}
+          streak={getStreak()}
+          totalMastered={totalMastered}
+          onStudyAgain={() => setDone(null)}
+          onAsk={onAsk}
+        />
+        <button
+          type="button"
+          onClick={() => setSelectedId(null)}
+          className="w-full py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
+        >
+          ← Back to study home
+        </button>
+      </div>
+    );
+  }
+
+  const deckCards = (detail.flashcards || []).map((c, i) => ({
+    id: `card-${i}`,
+    question: c.question,
+    answer: c.answer,
+    sourceStart: c.sourceStart,
+  }));
+
+  // --- Player ---
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={() => setSelectedId(null)}
+          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
+        >
+          ← All circuits
+        </button>
+        <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800" role="tablist" aria-label="Study mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'deck'}
+            onClick={() => setTab('deck')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              tab === 'deck' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Flashcards ({deckCards.length})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'quiz'}
+            onClick={() => setTab('quiz')}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              tab === 'quiz' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Quiz ({quiz.length})
+          </button>
+        </div>
+      </div>
+
+      {tab === 'deck' ? (
+        <DeckPlayer
+          lectureId={detail.id}
+          lectureTitle={detail.title}
+          cards={deckCards}
+          initialBoxes={getAllBoxes(detail.id)}
+          onRateCard={(cardId, known) => setBox(detail.id, cardId, rate(getBox(detail.id, cardId), known))}
+          onOpenSource={(t) => onOpenSource(detail.id, t)}
+          onComplete={(s) => {
+            recordSession(detail.id, s.known, s.known + s.learning, s.seconds);
+            recordStudyDay();
+            setDone({ headline: `${s.known} / ${s.known + s.learning} cleared`, seconds: s.seconds });
+            setStatsTick((t) => t + 1);
+          }}
+        />
+      ) : (
+        <QuizPlayer
+          lectureId={detail.id}
+          lectureTitle={detail.title}
+          questions={quiz}
+          onOpenSource={(t) => onOpenSource(detail.id, t)}
+          onFinish={(r) => {
+            recordSession(detail.id, r.score, r.total, r.seconds);
+            recordStudyDay();
+            setDone({ headline: `${r.score} / ${r.total} correct`, seconds: r.seconds });
+            setStatsTick((t) => t + 1);
+          }}
+        />
+      )}
+    </div>
+  );
+};
