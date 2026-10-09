@@ -177,6 +177,14 @@ export default function HomePage() {
   const mostRecentProcessingMs = mostRecentLecture
     ? getProcessingMs(mostRecentLecture)
     : null;
+  const mostRecentCardCount = mostRecentLecture
+    ? (lectureCounts[mostRecentLecture.id]?.cards ?? 0)
+    : 0;
+  const showStudyButton =
+    mostRecentLecture !== null &&
+    !countsLoading &&
+    lectureCounts[mostRecentLecture.id] !== undefined &&
+    mostRecentCardCount > 0;
   const recentLectures = mostRecentLecture
     ? lectures.filter((lecture) => lecture.id !== mostRecentLecture.id)
     : lectures;
@@ -353,13 +361,25 @@ export default function HomePage() {
                 )}
             </div>
 
-            <Link
-              href={`/lectures/${mostRecentLecture.id}`}
-              className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0 shadow-xs"
-            >
-              <span>Continue studying</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+              {showStudyButton && mostRecentLecture && (
+                <Link
+                  href={`/study/${mostRecentLecture.id}`}
+                  className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0 shadow-xs"
+                >
+                  <CreditCard className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Study {mostRecentCardCount} cards</span>
+                </Link>
+              )}
+
+              <Link
+                href={`/lectures/${mostRecentLecture.id}`}
+                className="px-5 py-2.5 rounded-xl bg-[#FAF9F5] dark:bg-[#19233C] hover:bg-[#F4F4F0] dark:hover:bg-[#1E293B] text-[#0F172A] dark:text-white border border-[#E5E5DF] dark:border-[#1E293B] text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              >
+                <span>Continue studying</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
         </div>
       )}
