@@ -5,6 +5,8 @@ export * from './chunker.js';
 export * from './vector.js';
 export * from './schemas.js';
 export * from './prompts.js';
+export * from './pipeline.js';
+
 
 
 
