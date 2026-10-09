@@ -48,7 +48,25 @@
 
 ## Traceability
 
-(Filled by roadmap: each REQ-ID mapped to exactly one phase.)
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DOC-01 | Phase 1 | Pending |
+| DOC-02 | Phase 1 | Pending |
+| DOC-03 | Phase 1 | Pending |
+| DOC-04 | Phase 1 | Pending |
+| EXAM-01 | Phase 2 | Pending |
+| EXAM-02 | Phase 2 | Pending |
+| EXAM-03 | Phase 2 | Pending |
+| EXAM-04 | Phase 2 | Pending |
+| PLAY-01 | Phase 2 | Pending |
+| PLAY-02 | Phase 3 | Pending |
+| PLAY-03 | Phase 3 | Pending |
+| QA-01 | Phase 3 | Pending |
+| QA-02 | Phase 3 | Pending |
+| QA-03 | Phase 3 | Pending |
+| LIB-01 | Phase 4 | Pending |
+| LIB-02 | Phase 4 | Pending |
+| LIB-03 | Phase 3 | Pending |
 
 ---
 
