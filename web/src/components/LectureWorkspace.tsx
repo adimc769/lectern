@@ -30,6 +30,7 @@ import {
   AlertCircle,
   ShieldCheck,
   Sparkles,
+  HelpCircle,
   Download,
   ChevronDown,
   Printer,
@@ -527,6 +528,16 @@ export function LectureWorkspace({
               <Sparkles className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Start studying</span>
               <span className="sm:hidden">Study</span>
+            </Link>
+
+            {/* Quiz jump: opens the study session on the quiz tab */}
+            <Link
+              href={`/study/${lecture.id}?tab=quiz`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF9F5] hover:bg-[#E5E5DF] dark:bg-[#19233C] dark:hover:bg-[#1E293B] border border-[#E5E5DF] dark:border-[#1E293B] text-xs font-semibold text-[#0F172A] dark:text-white transition-colors"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+              <span className="hidden sm:inline">Quiz</span>
+              <span className="sm:hidden">Quiz</span>
             </Link>
 
             {/* Quick Cross-Lecture Q&A jump button */}

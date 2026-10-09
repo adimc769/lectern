@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import type { LectureDTO } from '@lectern/shared';
 import type { QuizQuestion } from '../../../../../packages/ui/src/types';
 import { fetchLecture, getFallbackLecture } from '../../../lib/api';
+import { buildFallbackQuiz } from '../../../lib/quizFallback';
 import { DeckPlayer } from '../../../../../packages/ui/src/study/DeckPlayer';
 import { QuizPlayer } from '../../../../../packages/ui/src/study/QuizPlayer';
 import { CompletionScreen } from '../../../../../packages/ui/src/study/CompletionScreen';
@@ -33,12 +34,28 @@ async function fetchQuiz(id: string): Promise<QuizQuestion[]> {
 }
 
 export default function StudySessionPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-24 text-center space-y-3">
+          <div className="w-6 h-6 border-2 border-[#0F172A] dark:border-white border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Opening your study circuit...</p>
+        </div>
+      }
+    >
+      <StudySessionContent />
+    </Suspense>
+  );
+}
+
+function StudySessionContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = typeof params?.id === 'string' ? params.id : '';
   const [lecture, setLecture] = useState<LectureDTO | null>(null);
   const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
-  const [tab, setTab] = useState<'deck' | 'quiz'>('deck');
+  const [tab, setTab] = useState<'deck' | 'quiz'>(searchParams.get('tab') === 'quiz' ? 'quiz' : 'deck');
   const [done, setDone] = useState<{ headline: string; seconds: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,14 +67,15 @@ export default function StudySessionPage() {
         const [detail, questions] = await Promise.all([fetchLecture(id), fetchQuiz(id)]);
         if (!cancelled) {
           setLecture(detail);
-          setQuiz(questions);
+          // Real backend quiz wins; otherwise build one from the flashcards.
+          setQuiz(questions.length > 0 ? questions : buildFallbackQuiz(detail));
         }
       } catch (err) {
         if (!cancelled) {
           const fallback = getFallbackLecture(id);
           if (fallback) {
             setLecture(fallback);
-            setQuiz([]);
+            setQuiz(buildFallbackQuiz(fallback));
           } else {
             setError(err instanceof Error ? err.message : 'Could not load study session.');
           }
