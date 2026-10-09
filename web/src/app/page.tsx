@@ -93,25 +93,41 @@ export default function HomePage() {
     }
   };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
+  const formatAudioLength = (seconds: number): string => {
+    const total = Math.round(seconds);
+    if (total < 60) return `${total}s`;
+    if (total < 3600) return `${Math.round(total / 60)} min`;
+    const hours = Math.floor(total / 3600);
+    const mins = Math.round((total - hours * 3600) / 60);
+    if (mins === 60) return `${hours + 1}h`;
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
   };
 
-  const formatDate = (isoString?: string) => {
-    if (!isoString) return 'Recent';
-    try {
-      return new Date(isoString).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-      });
-    } catch {
-      return 'Recent';
-    }
+  const getProcessingMs = (lecture: LectureDTO): number | null => {
+    const start = new Date(lecture.createdAt).getTime();
+    const end = new Date(lecture.updatedAt).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+    const diff = end - start;
+    if (diff <= 0) return null;
+    return diff;
+  };
+
+  const formatProcessingTime = (ms: number): string => {
+    const totalSeconds = Math.round(ms / 1000);
+    if (totalSeconds < 60) return `${totalSeconds} s`;
+    if (totalSeconds < 3600) return `${Math.round(totalSeconds / 60)} min`;
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.round((totalSeconds - hours * 3600) / 60);
+    if (mins === 60) return `${hours + 1}h`;
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
   };
 
   const mostRecentLecture = lectures.length > 0 ? lectures[0] : null;
+  const mostRecentProcessingMs = mostRecentLecture
+    ? getProcessingMs(mostRecentLecture)
+    : null;
   const recentLectures = mostRecentLecture
     ? lectures.filter((lecture) => lecture.id !== mostRecentLecture.id)
     : lectures;
@@ -260,9 +276,13 @@ export default function HomePage() {
                   <span>{mostRecentLecture.status}</span>
                 </span>
                 <span>&bull;</span>
-                <span>{formatDuration(mostRecentLecture.duration || 0)}</span>
-                <span>&bull;</span>
-                <span>{formatDate(mostRecentLecture.createdAt)}</span>
+                <span>Audio {formatAudioLength(mostRecentLecture.duration || 0)}</span>
+                {mostRecentProcessingMs !== null && (
+                  <>
+                    <span>&bull;</span>
+                    <span>Processed in {formatProcessingTime(mostRecentProcessingMs)}</span>
+                  </>
+                )}
               </div>
 
               <h3 className="text-base font-bold text-[#0F172A] dark:text-white truncate">
@@ -339,9 +359,16 @@ export default function HomePage() {
               >
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 text-[11px] font-mono text-[#64748B] dark:text-[#94A3B8]">
-                    <span>{formatDuration(lecture.duration || 0)}</span>
-                    <span>&bull;</span>
-                    <span>{formatDate(lecture.createdAt)}</span>
+                    <span>Audio {formatAudioLength(lecture.duration || 0)}</span>
+                    {getProcessingMs(lecture) !== null && (
+                      <>
+                        <span>&bull;</span>
+                        <span>
+                          Processed in{' '}
+                          {formatProcessingTime(getProcessingMs(lecture) as number)}
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   <Link
